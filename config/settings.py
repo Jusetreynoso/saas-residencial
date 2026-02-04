@@ -30,6 +30,10 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 # Permitir que Railway sirva la página
 ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://web-production-saas-residencial.up.railway.app', 
+]
+
 
 # Application definition
 
