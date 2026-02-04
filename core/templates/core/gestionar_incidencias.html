@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Mantenimiento</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container mt-5 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>🛠️ Reportes de Mantenimiento</h2>
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">Volver</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-success">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        {% for incidencia in incidencias %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm border-{% if incidencia.estado == 'PENDIENTE' %}danger{% elif incidencia.estado == 'RESUELTO' %}success{% else %}warning{% endif %}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">{{ incidencia.titulo }}</span>
+                    <span class="badge bg-dark">{{ incidencia.fecha_creacion|date:"d M" }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex mb-3">
+                        <div class="me-3">
+                            <span class="d-block small text-muted">Reportado por:</span>
+                            <strong>{{ incidencia.usuario.first_name }} ({{ incidencia.usuario.apartamento.numero }})</strong>
+                        </div>
+                        <div>
+                            <span class="d-block small text-muted">Estado Actual:</span>
+                            <span class="badge bg-{% if incidencia.estado == 'PENDIENTE' %}danger{% elif incidencia.estado == 'RESUELTO' %}success{% else %}warning{% endif %}">
+                                {{ incidencia.get_estado_display }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <p class="card-text bg-light p-2 rounded">{{ incidencia.descripcion }}</p>
+                    
+                    {% if incidencia.foto %}
+                        <a href="{{ incidencia.foto.url }}" target="_blank" class="btn btn-sm btn-outline-primary mb-3">📷 Ver Foto Adjunta</a>
+                    {% endif %}
+
+                    <hr>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="incidencia_id" value="{{ incidencia.id }}">
+                        
+                        <label class="small fw-bold">Actualizar Estado:</label>
+                        <div class="input-group input-group-sm mb-2">
+                            <select name="nuevo_estado" class="form-select">
+                                <option value="PENDIENTE" {% if incidencia.estado == 'PENDIENTE' %}selected{% endif %}>🔴 Pendiente</option>
+                                <option value="EN_PROCESO" {% if incidencia.estado == 'EN_PROCESO' %}selected{% endif %}>🟠 En Proceso</option>
+                                <option value="RESUELTO" {% if incidencia.estado == 'RESUELTO' %}selected{% endif %}>🟢 Resuelto</option>
+                                <option value="RECHAZADO" {% if incidencia.estado == 'RECHAZADO' %}selected{% endif %}>⚪ Rechazado</option>
+                            </select>
+                            <button class="btn btn-primary">Guardar</button>
+                        </div>
+                        <input type="text" name="comentario" class="form-control form-control-sm" placeholder="Respuesta al vecino..." value="{{ incidencia.comentario_admin|default:'' }}">
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center p-5">
+            <h3 class="text-muted">✅ Todo en orden. No hay reportes pendientes.</h3>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+</body>
+</html>

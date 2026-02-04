@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cuentas por Cobrar</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">💸 Cuentas por Cobrar</h2>
+            <p class="text-muted">Gestión de cobros pendientes</p>
+        </div>
+        <div class="card bg-success text-white">
+            <div class="card-body py-2 px-4 text-center">
+                <h3 class="mb-0 fw-bold">${{ total_por_cobrar }}</h3>
+                <small>Total Pendiente</small>
+            </div>
+        </div>
+    </div>
+    
+    <a href="{% url 'dashboard' %}" class="btn btn-secondary mb-3">⬅ Volver al Dashboard</a>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card shadow">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Apto</th>
+                            <th>Residente</th>
+                            <th>Concepto</th>
+                            <th>Vencimiento</th>
+                            <th>Monto</th>
+                            <th class="text-end">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for factura in deudas %}
+                        <tr>
+                            <td class="fw-bold fs-5 bg-light">
+                                {% if factura.usuario.apartamento %}
+                                    {{ factura.usuario.apartamento.numero }}
+                                {% else %}
+                                    <span class="badge bg-danger">Sin Apto</span>
+                                {% endif %}
+                            </td>
+                            
+                            <td>
+                                {{ factura.usuario.first_name }} {{ factura.usuario.last_name }}<br>
+                                <small class="text-muted">@{{ factura.usuario.username }}</small>
+                            </td>
+
+                            <td>
+                                {% if factura.tipo == 'GAS' %}
+                                    <span class="badge bg-warning text-dark">🔥 Gas</span>
+                                {% else %}
+                                    <span class="badge bg-primary">🏢 Cuota</span>
+                                {% endif %}
+                                <div class="small fw-bold">{{ factura.concepto }}</div>
+                            </td>
+
+                            <td>
+                                {{ factura.fecha_vencimiento|date:"d M Y" }}
+                                {% if factura.fecha_vencimiento < today %}
+                                    <br><span class="badge bg-danger">⚠️ Vencida</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="fw-bold text-danger fs-5">${{ factura.monto }}</td>
+
+                            <td class="text-end">
+                                <form action="{% url 'registrar_pago' factura.id %}" method="post" onsubmit="return confirm('¿Confirmas que recibiste el pago de ${{ factura.monto }}?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success fw-bold btn-sm">
+                                        💰 Cobrar
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center p-5">
+                                <div class="text-muted">
+                                    <h4>🎉 ¡Excelente!</h4>
+                                    <p>No hay deudas pendientes por cobrar.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

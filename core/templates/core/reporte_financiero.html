@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte Financiero</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .card-icon { font-size: 2rem; }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container mt-5 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">📊 Reporte Mensual</h2>
+            <p class="text-muted text-uppercase fw-bold">{{ fecha|date:"F Y" }}</p>
+        </div>
+        <div>
+            <button onclick="window.print()" class="btn btn-outline-dark">🖨️ Imprimir Reporte</button>
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Volver</a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-success shadow-sm">
+                <div class="card-body text-success text-center">
+                    <div class="card-icon">💰</div>
+                    <h5 class="card-title">Ingresos Cobrados</h5>
+                    <h2 class="fw-bold">+${{ total_ingresos }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-danger shadow-sm">
+                <div class="card-body text-danger text-center">
+                    <div class="card-icon">📉</div>
+                    <h5 class="card-title">Total Gastos</h5>
+                    <h2 class="fw-bold">-${{ total_gastos }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card {% if balance >= 0 %}border-primary bg-primary text-white{% else %}border-danger bg-danger text-white{% endif %} shadow">
+                <div class="card-body text-center">
+                    <div class="card-icon">⚖️</div>
+                    <h5 class="card-title">Balance del Mes</h5>
+                    <h2 class="fw-bold">${{ balance }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Detalle de Entradas</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Apto</th>
+                                <th>Concepto</th>
+                                <th class="text-end">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ingreso in lista_ingresos %}
+                            <tr>
+                                <td>{{ ingreso.fecha_pago|date:"d/m" }}</td>
+                                <td>{{ ingreso.usuario.apartamento.numero }}</td>
+                                <td><small>{{ ingreso.get_tipo_display }}</small></td>
+                                <td class="text-end fw-bold text-success">+{{ ingreso.monto }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center p-3 text-muted">Aún no hay cobros este mes.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Detalle de Salidas</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Descripción</th>
+                                <th>Cat.</th>
+                                <th class="text-end">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for gasto in lista_gastos %}
+                            <tr>
+                                <td>{{ gasto.fecha_gasto|date:"d/m" }}</td>
+                                <td>{{ gasto.descripcion }}</td>
+                                <td><small class="text-muted">{{ gasto.get_categoria_display }}</small></td>
+                                <td class="text-end fw-bold text-danger">-{{ gasto.monto }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center p-3 text-muted">No hay gastos registrados.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

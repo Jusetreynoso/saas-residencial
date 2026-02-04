@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registrar Gasto</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📉 Registrar Gasto / Compra</h2>
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">Volver</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-5">
+            <div class="card shadow">
+                <div class="card-header bg-secondary text-white fw-bold">Nuevo Gasto</div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="fw-bold">Descripción</label>
+                            {{ form.descripcion }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold">Monto ($)</label>
+                            {{ form.monto }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold">Fecha</label>
+                            {{ form.fecha_gasto }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold">Categoría</label>
+                            {{ form.categoria }}
+                        </div>
+                        <button type="submit" class="btn btn-dark w-100">Guardar Gasto</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mt-3 bg-light border-0">
+                <div class="card-body text-center">
+                    <h5 class="text-muted">Total Gastado este Mes</h5>
+                    <h2 class="text-danger fw-bold">${{ total_mes|default:"0.00" }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <div class="card shadow">
+                <div class="card-header bg-white">Historial Reciente</div>
+                <table class="table table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Descripción</th>
+                            <th>Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for gasto in ultimos_gastos %}
+                        <tr>
+                            <td>{{ gasto.fecha_gasto|date:"d/m/Y" }}</td>
+                            <td>{{ gasto.descripcion }}</td>
+                            <td class="text-danger fw-bold">-${{ gasto.monto }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center text-muted">No hay gastos recientes.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

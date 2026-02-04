@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Recibo de Pago #{{ factura.id }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #555; } /* Fondo gris para resaltar la hoja */
+        .hoja-recibo {
+            background: white;
+            width: 800px;
+            margin: 40px auto;
+            padding: 40px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            min-height: 600px;
+            position: relative;
+        }
+        .sello-pagado {
+            position: absolute;
+            top: 150px;
+            right: 100px;
+            border: 5px solid #198754;
+            color: #198754;
+            padding: 10px 20px;
+            font-size: 2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            transform: rotate(-15deg);
+            opacity: 0.8;
+        }
+        /* Esto hace que al imprimir, se quite el fondo gris y el botón */
+        @media print {
+            body { background: white; }
+            .hoja-recibo { width: 100%; margin: 0; padding: 0; box-shadow: none; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="text-center no-print mt-3">
+        <button onclick="window.print()" class="btn btn-warning fw-bold btn-lg">🖨️ Imprimir / Guardar PDF</button>
+        <button onclick="window.close()" class="btn btn-secondary btn-lg">Cerrar</button>
+    </div>
+
+    <div class="hoja-recibo">
+        <div class="sello-pagado">PAGADO</div>
+
+        <div class="row border-bottom pb-3 mb-4">
+            <div class="col-8">
+                <h1>{{ factura.residencial.nombre }}</h1>
+                <p class="text-muted mb-0">{{ factura.residencial.direccion }}</p>
+            </div>
+            <div class="col-4 text-end">
+                <h4 class="text-secondary">RECIBO DE PAGO</h4>
+                <h5 class="fw-bold">#{{ factura.id|stringformat:"06d" }}</h5>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-6">
+                <h6 class="fw-bold text-uppercase text-muted">Recibido de:</h6>
+                <h4>{{ factura.usuario.first_name }} {{ factura.usuario.last_name }}</h4>
+                <p>Apartamento: <strong>{{ factura.usuario.apartamento.numero }}</strong></p>
+            </div>
+            <div class="col-6 text-end">
+                <h6 class="fw-bold text-uppercase text-muted">Fecha de Pago:</h6>
+                <h4>{{ factura.fecha_pago|date:"d" }} de {{ factura.fecha_pago|date:"F, Y" }}</h4>
+            </div>
+        </div>
+
+        <table class="table table-bordered mb-4">
+            <thead class="table-light">
+                <tr>
+                    <th>Concepto</th>
+                    <th>Periodo</th>
+                    <th class="text-end">Monto</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ factura.concepto }}</td>
+                    <td>{{ factura.fecha_emision|date:"F Y" }}</td>
+                    <td class="text-end fs-5">${{ factura.monto }}</td>
+                </tr>
+            </tbody>
+            <tfoot class="table-light">
+                <tr>
+                    <td colspan="2" class="text-end fw-bold">TOTAL PAGADO</td>
+                    <td class="text-end fw-bold fs-4">${{ factura.monto }}</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="mt-5 pt-5 text-center">
+            <div style="border-top: 1px solid #000; width: 200px; margin: 0 auto;"></div>
+            <small class="text-muted">Firma Autorizada</small>
+            <br>
+            <small>Administración {{ factura.residencial.nombre }}</small>
+        </div>
+        
+        <div class="text-center mt-5">
+            <small class="text-muted fst-italic">Comprobante generado electrónicamente el {% now "d/m/Y H:i" %}</small>
+        </div>
+    </div>
+
+</body>
+</html>
