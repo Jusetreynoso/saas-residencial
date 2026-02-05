@@ -62,6 +62,8 @@ class Usuario(AbstractUser):
     residencial = models.ForeignKey(Residencial, on_delete=models.CASCADE, null=True, blank=True)
     apartamento = models.ForeignKey(Apartamento, on_delete=models.SET_NULL, null=True, blank=True, related_name='habitantes')
 
+    saldo_a_favor = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
     def __str__(self):
         return f"{self.username} ({self.get_rol_display()})"
 
@@ -178,6 +180,7 @@ class Factura(models.Model):
     )
     ESTADOS_PAGO = (
         ('PENDIENTE', 'Pendiente'),
+        ('PARCIAL', 'Abono Parcial'),
         ('PAGADO', 'Pagado'),
         ('VENCIDO', 'Vencido'),
     )
@@ -194,6 +197,8 @@ class Factura(models.Model):
     fecha_pago = models.DateField(null=True, blank=True)
     
     estado = models.CharField(max_length=10, choices=ESTADOS_PAGO, default='PENDIENTE')
+
+    monto_pagado = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def __str__(self):
         return f"{self.concepto} - {self.usuario.username} (${self.monto})"

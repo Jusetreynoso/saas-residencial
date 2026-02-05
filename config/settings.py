@@ -14,6 +14,12 @@ import dj_database_url
 from django.core.management.utils import get_random_secret_key
 from pathlib import Path
 
+# --- ☢️ ANTÍDOTO: BORRAR VARIABLE CORRUPTA ☢️ ---
+# Esto obliga a Django a olvidar la variable de la nube,
+# sin importar si tu terminal la tiene guardada o no.
+if 'DATABASE_URL' in os.environ:
+    del os.environ['DATABASE_URL']
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -45,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'core',
+    'mathfilters',
 ]
 
 MIDDLEWARE = [
@@ -79,20 +86,29 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
+# Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': dj_database_url.config(
-        # 1. En la nube: Railway inyectará su propia URL aquí automáticamente.
-        # 2. En tu PC: Usará este 'default' que ponemos abajo.
-        
-        # 👇 REEMPLAZA ESTO CON TUS DATOS DE PGADMIN / POSTGRES LOCAL 👇
-        default='postgres://postgres:admin123@localhost:5432/saas_residencial_db',
-        
-        conn_max_age=600,
-        ssl_require=os.getenv('DEBUG', 'False') == 'False' # Solo requiere SSL en la nube, no en tu PC
-    )
-}
+# Verificamos si estamos en Railway (Nube)
+if 'DATABASE_URL' in os.environ:
+    DATABASES = {
+        'default': dj_database_url.config(
+            conn_max_age=600,
+            ssl_require=True
+        )
+    }
+else:
+    # Estamos en tu PC (Local)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'saas_residencial_db',
+            'USER': 'postgres',
+            'PASSWORD': 'J@$$el*123',  # <--- Tu clave nueva sin caracteres raros
+            'HOST': 'localhost',
+            'PORT': '5432',
+        }
+    }
 
 
 # Password validation
@@ -117,9 +133,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es-do'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Santo_Domingo'
 
 USE_I18N = True
 
@@ -134,6 +150,10 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Esta línea es la MAGIA que hace que funcione en Railway
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# --- CONFIGURACIÓN PARA SUBIR FOTOS (MEDIA) ---
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 AUTH_USER_MODEL = 'core.Usuario'
 
