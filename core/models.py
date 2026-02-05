@@ -199,6 +199,7 @@ class Factura(models.Model):
     estado = models.CharField(max_length=10, choices=ESTADOS_PAGO, default='PENDIENTE')
 
     monto_pagado = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    saldo_pendiente = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     def __str__(self):
         return f"{self.concepto} - {self.usuario.username} (${self.monto})"

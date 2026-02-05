@@ -395,15 +395,52 @@ def cuentas_por_cobrar(request):
         'today': timezone.now().date()
     })
 
+# En core/views.py
+
+from decimal import Decimal # <--- IMPORTANTE: Agrega esto arriba con los imports
+
 @login_required
 def registrar_pago(request, factura_id):
     factura = get_object_or_404(Factura, pk=factura_id, residencial=request.user.residencial)
     
     if request.method == 'POST':
-        factura.estado = 'PAGADO'
+        # 1. Obtenemos el monto que el administrador escribió en el formulario
+        monto_recibido = Decimal(request.POST.get('monto_pagado', 0))
+        
+        # 2. Validación básica
+        if monto_recibido <= 0:
+            messages.error(request, "⚠️ El monto debe ser mayor a 0.")
+            return redirect('cuentas_por_cobrar')
+
+        # 3. Lógica de Negocio
+        # Asumimos que tu modelo Factura tiene un campo 'monto_pagado' (si no, avísame)
+        # Si no lo tiene, lo simulamos sumando al saldo pendiente.
+        
+        deuda_actual = factura.monto - (factura.monto_pagado or 0)
+        
+        # Actualizamos lo pagado en la factura
+        factura.monto_pagado = (factura.monto_pagado or 0) + monto_recibido
         factura.fecha_pago = timezone.now().date()
+
+        # CASO A: Pagó la deuda completa o de más
+        if monto_recibido >= deuda_actual:
+            factura.estado = 'PAGADO'
+            factura.saldo_pendiente = 0
+            
+            sobrante = monto_recibido - deuda_actual
+            if sobrante > 0:
+                # Aquí podrías sumar al saldo a favor del usuario si tuvieras ese campo
+                messages.success(request, f"✅ Factura pagada. El vecino tiene un saldo a favor de ${sobrante:,.2f}")
+            else:
+                messages.success(request, f"✅ Factura pagada correctamente.")
+
+        # CASO B: Pago Parcial (Abono)
+        else:
+            factura.saldo_pendiente = deuda_actual - monto_recibido
+            # No cambiamos el estado a PAGADO, se queda en PENDIENTE (o podrías crear un estado ABONADO)
+            messages.warning(request, f"💰 Abono registrado. Restan por pagar: ${factura.saldo_pendiente:,.2f}")
+
         factura.save()
-        messages.success(request, f"💰 Cobro exitoso. Factura de {factura.usuario.username} pagada.")
         
     return redirect('cuentas_por_cobrar')
 

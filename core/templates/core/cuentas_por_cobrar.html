@@ -11,7 +11,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-0">💸 Cuentas por Cobrar</h2>
-            <p class="text-muted">Gestión de cobros pendientes</p>
+            <p class="text-muted">Gestión de cobros y abonos pendientes</p>
         </div>
         <div class="card bg-success text-white">
             <div class="card-body py-2 px-4 text-center">
@@ -25,7 +25,10 @@
 
     {% if messages %}
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
         {% endfor %}
     {% endif %}
 
@@ -39,7 +42,7 @@
                             <th>Residente</th>
                             <th>Concepto</th>
                             <th>Vencimiento</th>
-                            <th>Monto</th>
+                            <th>Deuda Pendiente</th>
                             <th class="text-end">Acción</th>
                         </tr>
                     </thead>
@@ -75,16 +78,74 @@
                                 {% endif %}
                             </td>
 
-                            <td class="fw-bold text-danger fs-5">${{ factura.monto }}</td>
+                            <td>
+                                <span class="fw-bold text-danger fs-5">
+                                    ${{ factura.saldo_pendiente|default:factura.monto }}
+                                </span>
+                                
+                                {% if factura.monto_pagado > 0 %}
+                                    <br>
+                                    <small class="text-muted">
+                                        Total: <span class="text-decoration-line-through">${{ factura.monto }}</span>
+                                    </small>
+                                    <span class="badge bg-info text-dark" style="font-size: 0.7em;">Abonado: ${{ factura.monto_pagado }}</span>
+                                {% endif %}
+                            </td>
 
                             <td class="text-end">
-                                <form action="{% url 'registrar_pago' factura.id %}" method="post" onsubmit="return confirm('¿Confirmas que recibiste el pago de ${{ factura.monto }}?');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-success fw-bold btn-sm">
-                                        💰 Cobrar
-                                    </button>
-                                </form>
-                            </td>
+                                <button type="button" class="btn btn-success btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalPago{{ factura.id }}">
+                                    💲 Registrar Pago
+                                </button>
+
+                                <div class="modal fade text-start" id="modalPago{{ factura.id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <form method="POST" action="{% url 'registrar_pago' factura.id %}">
+                                                {% csrf_token %}
+                                                
+                                                <div class="modal-header bg-success text-white">
+                                                    <h5 class="modal-title">Cobrar a {{ factura.usuario.first_name }}</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                
+                                                <div class="modal-body">
+                                                    <div class="alert alert-light border">
+                                                        <p class="mb-1"><strong>Concepto:</strong> {{ factura.concepto }}</p>
+                                                        <p class="mb-1"><strong>Total Factura:</strong> ${{ factura.monto }}</p>
+                                                        <h5 class="text-danger mt-2">
+                                                            <strong>Deuda Actual: ${{ factura.saldo_pendiente|default:factura.monto }}</strong>
+                                                        </h5>
+                                                    </div>
+                                                    
+                                                    <hr>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="montoInput{{ factura.id }}" class="form-label fw-bold">¿Cuánto dinero recibiste?</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text">$</span>
+                                                            <input type="number" step="0.01" class="form-control form-control-lg" 
+                                                                   name="monto_pagado" id="montoInput{{ factura.id }}"
+                                                                   required placeholder="Ej: 500.00" min="1">
+                                                        </div>
+                                                        <div class="form-text mt-2">
+                                                            <ul>
+                                                                <li>Si ingresas MENOS, se registra como abono.</li>
+                                                                <li>Si ingresas EL TOTAL, se marca como pagado.</li>
+                                                                <li>Si ingresas MÁS, el sistema te avisará el saldo a favor.</li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                    <button type="submit" class="btn btn-success fw-bold">Confirmar Cobro</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                </td>
                         </tr>
                         {% empty %}
                         <tr>
@@ -102,6 +163,8 @@
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>
