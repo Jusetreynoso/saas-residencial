@@ -639,39 +639,8 @@ def gestionar_incidencias(request):
 from django.http import HttpResponse
 
 
+# --- core/views.py ---
+
 def test_email_view(request):
-    # Importamos todo AQUÍ DENTRO para evitar errores de "olvido"
     from django.http import HttpResponse
-    from django.core.mail import send_mail
-    from django.conf import settings
-    import os
-    
-    try:
-        # 1. Intentamos leer las credenciales
-        usuario = settings.EMAIL_HOST_USER
-        clave = settings.EMAIL_HOST_PASSWORD
-        
-        # Debug info
-        info = f"Usuario: {usuario} | Clave: {'OK' if clave else 'VACIA'}"
-        print(f"🔍 DIAGNOSTICO: {info}")
-
-        # 2. Intentamos enviar
-        send_mail(
-            'Prueba Diagnóstico Railway',
-            f'Si lees esto, el correo funciona.\n\n{info}',
-            usuario,
-            ['TU_CORREO_PERSONAL_AQUI@gmail.com'], # <--- ¡PON TU EMAIL AQUÍ!
-            fail_silently=False
-        )
-        
-        return HttpResponse(f"<h1 style='color:green'>✅ CORREO ENVIADO</h1><p>{info}</p>")
-
-    except Exception as e:
-        # Si falla, mostramos el error en pantalla
-        return HttpResponse(f"""
-            <h1 style='color:red'>❌ ERROR</h1>
-            <p>El sistema falló con este mensaje:</p>
-            <pre style='background:#eee; padding:15px; border:2px solid red;'>{e}</pre>
-            <hr>
-            <p>Revisa en Railway > Variables si 'EMAIL_HOST_USER' y 'EMAIL_HOST_PASSWORD' están bien escritas.</p>
-        """)
+    return HttpResponse("<h1 style='color:blue'>👋 HOLA MUNDO: La vista funciona</h1>")
