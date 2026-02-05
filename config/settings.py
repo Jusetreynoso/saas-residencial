@@ -157,10 +157,12 @@ AUTH_USER_MODEL = 'core.Usuario'
 LOGIN_REDIRECT_URL = '/'  # Al loguearse, ir al inicio
 LOGOUT_REDIRECT_URL = '/accounts/login/' # Al salir, ir al login
 
-# --- CONFIGURACIÓN DE CORREO REAL (GMAIL) ---
+# --- CONFIGURACIÓN DE CORREO (DINÁMICA) ---
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'saasresidencial@gmail.com' # <--- PON TU GMAIL AQUÍ
-EMAIL_HOST_PASSWORD = 'miak mqmn fmom qksu' # <--- PON LA CLAVE DE 16 LETRAS AQUÍ
+
+# Leemos las variables de la nube. Si no existen, usa las de respaldo (tu PC).
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'saasresidencial@gmail.com')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'miak mqmn fmom qksu')
