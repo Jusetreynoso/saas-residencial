@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from decimal import Decimal # <--- IMPORTANTE
+from decimal import Decimal # <--- IMPORTANTE: Necesario para cálculos financieros
 
 # ---------------------------------------------------------
 # 1. Nivel Jerárquico (Multi-tenancy)
@@ -198,8 +198,10 @@ class Factura(models.Model):
     
     estado = models.CharField(max_length=10, choices=ESTADOS_PAGO, default='PENDIENTE')
 
+    # --- CAMPOS AGREGADOS PARA PAGOS PARCIALES ---
     monto_pagado = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     saldo_pendiente = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    # ---------------------------------------------
 
     def __str__(self):
         return f"{self.concepto} - {self.usuario.username} (${self.monto})"
@@ -214,7 +216,7 @@ class LecturaGas(models.Model):
     lectura_actual = models.DecimalField(max_digits=10, decimal_places=2)
     precio_galon_mes = models.DecimalField(max_digits=6, decimal_places=2)
     
-    # CORRECCIÓN 1: Definimos el default como Decimal('1.20') para evitar que sea Float
+    # Default decimal para evitar conflictos con float
     factor_conversion = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('1.20'))
     
     consumo_galones = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
@@ -226,10 +228,9 @@ class LecturaGas(models.Model):
         # 1. Consumo m3
         consumo_m3 = self.lectura_actual - self.lectura_anterior
         if consumo_m3 < 0:
-            consumo_m3 = Decimal('0.00') # Forzamos Decimal
+            consumo_m3 = Decimal('0.00')
         
-        # 2. CORRECCIÓN 2: Convertir factor a Decimal antes de multiplicar
-        # Esto soluciona el error "TypeError: unsupported operand type for *: Decimal and float"
+        # 2. Convertir factor a Decimal para cálculo seguro
         factor_seguro = Decimal(str(self.factor_conversion))
         
         self.consumo_galones = consumo_m3 * factor_seguro
@@ -251,8 +252,6 @@ class Aviso(models.Model):
 
     def __str__(self):
         return f"{self.titulo} - {self.fecha_creacion.date()}"
-    
-# ... al final de core/models.py ...
 
 class Incidencia(models.Model):
     ESTADOS = [
