@@ -4,14 +4,16 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 import json 
 from django.core.serializers.json import DjangoJSONEncoder
-from .utils import enviar_whatsapp, enviar_correo_factura
 from django.http import JsonResponse
-
-# --- AQUÍ ESTÁ LA CLAVE ---
-from django.utils import timezone  
+from django.utils import timezone   
 from datetime import datetime, timedelta 
-# --------------------------
 
+# --- IMPORTS PARA CORREO (OBLIGATORIOS) ---
+from django.core.mail import send_mail
+from django.conf import settings
+# ------------------------------------------
+
+from .utils import enviar_whatsapp # Dejamos whatsapp, quitamos enviar_correo_factura
 from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia
 from .forms import ReservaForm, LecturaGasForm, GastoForm, AvisoForm, RegistroVecinoForm, IncidenciaForm
 from django.db.models import Sum, Max
@@ -211,9 +213,6 @@ def bloquear_fecha(request):
 # ---------------------------------------------
 # VISTA: Registrar Lectura Gas + Email
 # ---------------------------------------------
-# Asegúrate de tener estos imports arriba
-from django.db.models import Max
-
 @login_required
 def registrar_lectura_gas(request):
     if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
@@ -264,11 +263,29 @@ def registrar_lectura_gas(request):
                         lectura.factura_generada = nueva_factura
                         lectura.save()
                         
-                        # Enviar correo (Si configuraste el SMTP)
-                        try:
-                            enviar_correo_factura(nueva_factura)
-                        except:
-                            pass # Si falla el correo, no rompemos el sistema
+                        # --- MODIFICADO: ENVIO DE CORREO DIRECTO ---
+                        if residente.email:
+                            asunto = f"Factura Gas - {request.user.residencial.nombre}"
+                            mensaje = f"""
+                            Hola {residente.first_name},
+
+                            Se ha generado tu factura de consumo de GAS.
+
+                            ---------------------------------------
+                            Lectura Anterior: {lectura.lectura_anterior}
+                            Lectura Actual:   {lectura.lectura_actual}
+                            Consumo:          {lectura.consumo_galones:.2f} galones
+                            ---------------------------------------
+                            TOTAL A PAGAR:    ${lectura.total_a_pagar}
+                            Vencimiento:      {nueva_factura.fecha_vencimiento}
+                            ---------------------------------------
+                            """
+                            try:
+                                send_mail(asunto, mensaje, settings.EMAIL_HOST_USER, [residente.email], fail_silently=True)
+                                print(f"📧 Correo enviado a {residente.email}")
+                            except Exception as e:
+                                print(f"❌ Error correo: {e}")
+                        # -------------------------------------------
 
                         messages.success(request, f"✅ Factura generada para {apartamento.numero}: ${lectura.total_a_pagar}")
                     else:
@@ -281,19 +298,17 @@ def registrar_lectura_gas(request):
         precio = ultima_general.precio_galon_mes if ultima_general else 0.00
         form = LecturaGasForm(request.user, initial={'precio_galon_mes': precio})
 
-    # 2. PREPARAR LA TABLA DE "ESTADO DE MEDIDORES" (LO QUE PEDISTE)
+    # 2. PREPARAR LA TABLA DE "ESTADO DE MEDIDORES"
     apartamentos = Apartamento.objects.filter(residencial=request.user.residencial).order_by('numero')
     estado_medidores = []
 
     for apt in apartamentos:
-        # Buscamos la ULTIMA lectura de este apartamento
         ultima = LecturaGas.objects.filter(apartamento=apt).order_by('-fecha_lectura').first()
-        
         datos = {
             'apto': apt.numero,
             'ultima_fecha': ultima.fecha_lectura if ultima else "---",
             'lectura_anterior': ultima.lectura_anterior if ultima else 0.0,
-            'lectura_actual': ultima.lectura_actual if ultima else 0.0, # Esta será la "Anterior" del nuevo mes
+            'lectura_actual': ultima.lectura_actual if ultima else 0.0,
             'consumo': (ultima.lectura_actual - ultima.lectura_anterior) if ultima else 0.0,
             'precio': ultima.precio_galon_mes if ultima else 0.0,
             'total': ultima.total_a_pagar if ultima else 0.0,
@@ -302,8 +317,9 @@ def registrar_lectura_gas(request):
 
     return render(request, 'core/registrar_gas.html', {
         'form': form,
-        'estado_medidores': estado_medidores # <--- Pasamos la lista a la tabla
+        'estado_medidores': estado_medidores
     })
+
 # ---------------------------------------------
 # VISTA: Generar Cuotas Masivas + Email
 # ---------------------------------------------
@@ -325,7 +341,6 @@ def generar_cuotas_masivas(request):
         dueno = apto.habitantes.first()
         
         if dueno:
-            # Validar si ya existe
             existe = Factura.objects.filter(
                 residencial=residencial,
                 usuario=dueno,
@@ -335,7 +350,6 @@ def generar_cuotas_masivas(request):
             ).exists()
             
             if not existe:
-                # Crear la factura (HE LIMPIADO TU CÓDIGO AQUÍ, HABÍA UN DUPLICADO)
                 nueva_factura = Factura.objects.create(
                     residencial=residencial,
                     usuario=dueno,
@@ -346,9 +360,25 @@ def generar_cuotas_masivas(request):
                     estado='PENDIENTE'
                 )
                 
-                # --- AQUÍ SE ENVÍA EL CORREO ---
-                enviar_correo_factura(nueva_factura)
-                # -------------------------------
+                # --- MODIFICADO: ENVIO DE CORREO DIRECTO ---
+                if dueno.email:
+                    asunto = f"Mantenimiento {timezone.now().strftime('%B')} - {residencial.nombre}"
+                    mensaje = f"""
+                    Hola {dueno.first_name},
+
+                    Se ha generado la cuota de mantenimiento del mes.
+                    
+                    ---------------------------------------
+                    Concepto:      {nueva_factura.concepto}
+                    TOTAL A PAGAR: ${nueva_factura.monto}
+                    Vencimiento:   {nueva_factura.fecha_vencimiento}
+                    ---------------------------------------
+                    """
+                    try:
+                        send_mail(asunto, mensaje, settings.EMAIL_HOST_USER, [dueno.email], fail_silently=True)
+                    except Exception as e:
+                        print(f"❌ Error correo masivo: {e}")
+                # -------------------------------------------
                 
                 contador += 1
     
@@ -519,10 +549,10 @@ def crear_vecino(request):
         if form.is_valid():
             # 1. Crear el usuario base
             nuevo_usuario = form.save(commit=False)
-            nuevo_usuario.residencial = request.user.residencial # Asignar al mismo edificio
-            nuevo_usuario.rol = 'RESIDENTE' # Por defecto es residente
+            nuevo_usuario.residencial = request.user.residencial 
+            nuevo_usuario.rol = 'RESIDENTE' 
             
-            # Guardamos teléfono manualmente porque no está en el form.save original de User
+            # Guardamos teléfono manualmente
             nuevo_usuario.telefono = form.cleaned_data.get('telefono')
             
             # 2. Asignar Apartamento (Si seleccionó uno)
@@ -543,11 +573,9 @@ def crear_vecino(request):
     apartamentos = Apartamento.objects.filter(residencial=request.user.residencial)
     datos_inteligentes = {}
 
-    print("--- INICIO DIAGNÓSTICO GAS ---") # <--- AGREGAR ESTO
+    print("--- INICIO DIAGNÓSTICO GAS ---") 
     for apt in apartamentos:
         # Buscamos la última lectura registrada
-        ultima = LecturaGas.objects.filter(apartamento=apt).order_by('-fecha_lectura').last() # OJO: Usamos .last() si ordenamos ascendente o .first() si es descendente.
-        # CORRECCIÓN: Vamos a asegurar el orden por ID para ser más precisos
         ultima = LecturaGas.objects.filter(apartamento=apt).order_by('-id').first()
         
         if ultima:
@@ -562,9 +590,6 @@ def crear_vecino(request):
     datos_json = json.dumps(datos_inteligentes, cls=DjangoJSONEncoder)
 
     return render(request, 'core/crear_vecino_form.html', {'form': form})
-# ... imports ...
-from .models import Incidencia
-from .forms import IncidenciaForm
 
 # 1. PARA EL VECINO: CREAR REPORTE
 @login_required
@@ -604,5 +629,3 @@ def gestionar_incidencias(request):
     incidencias = Incidencia.objects.filter(residencial=request.user.residencial).order_by('estado', '-fecha_creacion')
     
     return render(request, 'core/gestionar_incidencias.html', {'incidencias': incidencias})
-    
-   
