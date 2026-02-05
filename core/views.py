@@ -638,36 +638,40 @@ def gestionar_incidencias(request):
 
 from django.http import HttpResponse
 
-def test_email_view(request):
-    try:
-        import os
-        from django.http import HttpResponse
-        from django.core.mail import send_mail
-        from django.conf import settings
-        
-        # Datos de depuración
-        usuario = settings.EMAIL_HOST_USER
-        clave_longitud = len(settings.EMAIL_HOST_PASSWORD) if settings.EMAIL_HOST_PASSWORD else 0
-        
-        debug_info = f"Usuario: {usuario} | Longitud Clave: {clave_longitud}"
-        print(debug_info)
 
+def test_email_view(request):
+    # Importamos todo AQUÍ DENTRO para evitar errores de "olvido"
+    from django.http import HttpResponse
+    from django.core.mail import send_mail
+    from django.conf import settings
+    import os
+    
+    try:
+        # 1. Intentamos leer las credenciales
+        usuario = settings.EMAIL_HOST_USER
+        clave = settings.EMAIL_HOST_PASSWORD
+        
+        # Debug info
+        info = f"Usuario: {usuario} | Clave: {'OK' if clave else 'VACIA'}"
+        print(f"🔍 DIAGNOSTICO: {info}")
+
+        # 2. Intentamos enviar
         send_mail(
-            'Prueba de Diagnóstico Railway',
-            f'Si lees esto, el sistema funciona perfectamente.\n\nDatos técnicos: {debug_info}',
+            'Prueba Diagnóstico Railway',
+            f'Si lees esto, el correo funciona.\n\n{info}',
             usuario,
-            ['jreynoso280988@gmail.com'], # <--- ¡PON TU CORREO AQUÍ!
+            ['TU_CORREO_PERSONAL_AQUI@gmail.com'], # <--- ¡PON TU EMAIL AQUÍ!
             fail_silently=False
         )
-        return HttpResponse(f"""
-            <h1 style='color:green'>✅ ¡ÉXITO!</h1>
-            <p>El correo fue enviado correctamente.</p>
-            <p>Configuración usada: {debug_info}</p>
-        """)
+        
+        return HttpResponse(f"<h1 style='color:green'>✅ CORREO ENVIADO</h1><p>{info}</p>")
+
     except Exception as e:
+        # Si falla, mostramos el error en pantalla
         return HttpResponse(f"""
-            <h1 style='color:red'>❌ ERROR FATAL</h1>
-            <p>El correo falló por esta razón:</p>
-            <pre style='background:#eee; padding:10px; border:1px solid #999;'>{e}</pre>
-            <p>Configuración detectada: {usuario} (Clave: {clave_longitud} caracteres)</p>
+            <h1 style='color:red'>❌ ERROR</h1>
+            <p>El sistema falló con este mensaje:</p>
+            <pre style='background:#eee; padding:15px; border:2px solid red;'>{e}</pre>
+            <hr>
+            <p>Revisa en Railway > Variables si 'EMAIL_HOST_USER' y 'EMAIL_HOST_PASSWORD' están bien escritas.</p>
         """)
