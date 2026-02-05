@@ -13,7 +13,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 # ------------------------------------------
 
-from .utils import enviar_whatsapp # Dejamos whatsapp, quitamos enviar_correo_factura
+from .utils import enviar_whatsapp 
 from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia
 from .forms import ReservaForm, LecturaGasForm, GastoForm, AvisoForm, RegistroVecinoForm, IncidenciaForm
 from django.db.models import Sum, Max
@@ -211,7 +211,7 @@ def bloquear_fecha(request):
     return redirect('dashboard')
 
 # ---------------------------------------------
-# VISTA: Registrar Lectura Gas + Email
+# VISTA: Registrar Lectura Gas + Email (MODO DIAGNÓSTICO)
 # ---------------------------------------------
 @login_required
 def registrar_lectura_gas(request):
@@ -263,8 +263,10 @@ def registrar_lectura_gas(request):
                         lectura.factura_generada = nueva_factura
                         lectura.save()
                         
-                        # --- MODIFICADO: ENVIO DE CORREO DIRECTO ---
+                        # --- DIAGNÓSTICO DE CORREO (MODO AGRESIVO) ---
                         if residente.email:
+                            print(f"📨 INTENTANDO ENVIAR CORREO A: {residente.email}") 
+                            
                             asunto = f"Factura Gas - {request.user.residencial.nombre}"
                             mensaje = f"""
                             Hola {residente.first_name},
@@ -280,11 +282,12 @@ def registrar_lectura_gas(request):
                             Vencimiento:      {nueva_factura.fecha_vencimiento}
                             ---------------------------------------
                             """
-                            try:
-                                send_mail(asunto, mensaje, settings.EMAIL_HOST_USER, [residente.email], fail_silently=True)
-                                print(f"📧 Correo enviado a {residente.email}")
-                            except Exception as e:
-                                print(f"❌ Error correo: {e}")
+                            
+                            # SIN try/except y con fail_silently=False para provocar el error si falla
+                            send_mail(asunto, mensaje, settings.EMAIL_HOST_USER, [residente.email], fail_silently=False)
+                            
+                        else:
+                            print(f"⚠️ EL USUARIO {residente.username} NO TIENE CORREO REGISTRADO")
                         # -------------------------------------------
 
                         messages.success(request, f"✅ Factura generada para {apartamento.numero}: ${lectura.total_a_pagar}")
@@ -321,7 +324,7 @@ def registrar_lectura_gas(request):
     })
 
 # ---------------------------------------------
-# VISTA: Generar Cuotas Masivas + Email
+# VISTA: Generar Cuotas Masivas + Email (MODO DIAGNÓSTICO)
 # ---------------------------------------------
 @login_required
 def generar_cuotas_masivas(request):
@@ -360,8 +363,9 @@ def generar_cuotas_masivas(request):
                     estado='PENDIENTE'
                 )
                 
-                # --- MODIFICADO: ENVIO DE CORREO DIRECTO ---
+                # --- DIAGNÓSTICO DE CORREO (MODO AGRESIVO) ---
                 if dueno.email:
+                    print(f"📨 INTENTANDO ENVIAR MANTENIMIENTO A: {dueno.email}")
                     asunto = f"Mantenimiento {timezone.now().strftime('%B')} - {residencial.nombre}"
                     mensaje = f"""
                     Hola {dueno.first_name},
@@ -374,10 +378,10 @@ def generar_cuotas_masivas(request):
                     Vencimiento:   {nueva_factura.fecha_vencimiento}
                     ---------------------------------------
                     """
-                    try:
-                        send_mail(asunto, mensaje, settings.EMAIL_HOST_USER, [dueno.email], fail_silently=True)
-                    except Exception as e:
-                        print(f"❌ Error correo masivo: {e}")
+                    # SIN try/except y con fail_silently=False
+                    send_mail(asunto, mensaje, settings.EMAIL_HOST_USER, [dueno.email], fail_silently=False)
+                else:
+                    print(f"⚠️ EL USUARIO {dueno.username} NO TIENE EMAIL, SE SALTA EL ENVÍO.")
                 # -------------------------------------------
                 
                 contador += 1
