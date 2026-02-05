@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta, datetime
@@ -178,7 +179,7 @@ class IncidenciaForm(forms.ModelForm):
             'foto': forms.FileInput(attrs={'class': 'form-control'}),
         }
 
-# --- AL FINAL DE core/forms.py ---
+
 
 class EditarVecinoForm(forms.ModelForm):
     class Meta:

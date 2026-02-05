@@ -1,4 +1,3 @@
-from django.contrib.auth.forms import SetPasswordForm
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages 
@@ -8,15 +7,25 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.http import JsonResponse
 from django.utils import timezone   
 from datetime import datetime, timedelta 
+from decimal import Decimal
 
 # --- IMPORTS PARA CORREO (Se mantienen por si activas a futuro) ---
 from django.core.mail import send_mail
 from django.conf import settings
-# ------------------------------------------------------------------
+from django.contrib.auth.forms import SetPasswordForm # <--- Para cambiar claves
 
-from .utils import enviar_whatsapp 
+# --- AQUÍ ESTÁ LA CORRECCIÓN: Agregamos EditarVecinoForm ---
+from .forms import (
+    ReservaForm, 
+    LecturaGasForm, 
+    GastoForm, 
+    AvisoForm, 
+    RegistroVecinoForm, 
+    IncidenciaForm,
+    EditarVecinoForm # <--- ¡ESTE ERA EL QUE FALTABA!
+)
+
 from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia
-from .forms import ReservaForm, LecturaGasForm, GastoForm, AvisoForm, RegistroVecinoForm, IncidenciaForm, EditarVecinoForm
 from django.db.models import Sum, Max
 
 # ---------------------------------------------
@@ -58,11 +67,6 @@ def dashboard(request):
 
     else:
         context['mensaje'] = "Usuario sin residencial asignado."
-
-    # 3. LÓGICA DE NOTIFICACIONES
-    whatsapp_data = request.session.pop('whatsapp_data', None)
-    if whatsapp_data:
-        context['whatsapp_data'] = whatsapp_data
 
     return render(request, 'core/dashboard.html', context)
 
@@ -107,25 +111,15 @@ def gestionar_reserva(request, reserva_id, accion):
     reserva = get_object_or_404(Reserva, pk=reserva_id, residencial=request.user.residencial)
     usuario = reserva.usuario
     
-    mensaje_texto = ""
     if accion == 'aprobar':
         reserva.estado = 'APROBADA'
         messages.success(request, f'Reserva aprobada correctamente.')
-        mensaje_texto = f"Hola {usuario.first_name}, tu solicitud para el {reserva.area_social.nombre} el día {reserva.fecha_solicitud} ha sido APROBADA ✅. ¡Disfrútalo!"
         
     elif accion == 'rechazar':
         reserva.estado = 'RECHAZADA'
         messages.warning(request, f'Reserva rechazada.')
-        mensaje_texto = f"Hola {usuario.first_name}, lamentamos informarte que tu solicitud para el {reserva.area_social.nombre} ha sido RECHAZADA ❌. Contacta a la administración."
 
     reserva.save()
-
-    if usuario.telefono:
-        request.session['whatsapp_data'] = {
-            'telefono': usuario.telefono,
-            'mensaje': mensaje_texto
-        }
-
     return redirect('dashboard')
 
 @login_required
@@ -220,7 +214,6 @@ def registrar_lectura_gas(request):
         messages.error(request, "No tienes permiso.")
         return redirect('dashboard')
 
-    # 1. PROCESAR FORMULARIO (GUARDAR NUEVA LECTURA)
     if request.method == 'POST':
         form = LecturaGasForm(request.user, request.POST)
         if form.is_valid():
@@ -228,7 +221,6 @@ def registrar_lectura_gas(request):
             mes_actual = timezone.now().month
             anio_actual = timezone.now().year
             
-            # Validar duplicados del mes
             existe = LecturaGas.objects.filter(
                 residencial=request.user.residencial,
                 apartamento=apartamento,
@@ -242,13 +234,11 @@ def registrar_lectura_gas(request):
                 lectura = form.save(commit=False)
                 lectura.residencial = request.user.residencial
                 
-                # Validación de lógica
                 if lectura.lectura_actual < lectura.lectura_anterior:
                     messages.error(request, "⛔ Error: La lectura actual es menor a la anterior.")
                 else:
                     lectura.save() 
                     
-                    # Generar Factura
                     residente = lectura.apartamento.habitantes.first()
                     if residente:
                         consumo = lectura.lectura_actual - lectura.lectura_anterior
@@ -264,35 +254,16 @@ def registrar_lectura_gas(request):
                         lectura.factura_generada = nueva_factura
                         lectura.save()
                         
-                        # --- NOTIFICACIÓN (SOLO SIMULACIÓN) ---
-                        if residente.email:
-                            print(f"📨 [SIMULACIÓN] Se hubiera enviado correo a: {residente.email}")
-                            
-                            asunto = f"Factura Gas - {request.user.residencial.nombre}"
-                            mensaje = f"""
-                            Hola {residente.first_name},
-                            Se ha generado tu factura de consumo de GAS.
-                            TOTAL A PAGAR: ${lectura.total_a_pagar}
-                            """
-                            # NOTA: Comentamos el envío real para evitar errores en Railway
-                            # send_mail(asunto, mensaje, settings.EMAIL_HOST_USER, [residente.email], fail_silently=False)
-                            
-                        else:
-                            print(f"⚠️ EL USUARIO {residente.username} NO TIENE CORREO REGISTRADO")
-                        # -------------------------------------------
-
                         messages.success(request, f"✅ Factura generada para {apartamento.numero}: ${lectura.total_a_pagar}")
                     else:
                         messages.warning(request, f"⚠️ Lectura guardada, pero el apto {apartamento.numero} no tiene dueño asignado.")
                 
             return redirect('registrar_lectura_gas')
     else:
-        # Pre-llenar precio con el último usado en el edificio
         ultima_general = LecturaGas.objects.filter(residencial=request.user.residencial).last()
         precio = ultima_general.precio_galon_mes if ultima_general else 0.00
         form = LecturaGasForm(request.user, initial={'precio_galon_mes': precio})
 
-    # 2. PREPARAR LA TABLA DE "ESTADO DE MEDIDORES"
     apartamentos = Apartamento.objects.filter(residencial=request.user.residencial).order_by('numero')
     estado_medidores = []
 
@@ -333,7 +304,6 @@ def generar_cuotas_masivas(request):
     
     for apto in apartamentos:
         dueno = apto.habitantes.first()
-        
         if dueno:
             existe = Factura.objects.filter(
                 residencial=residencial,
@@ -344,7 +314,7 @@ def generar_cuotas_masivas(request):
             ).exists()
             
             if not existe:
-                nueva_factura = Factura.objects.create(
+                Factura.objects.create(
                     residencial=residencial,
                     usuario=dueno,
                     tipo='CUOTA',
@@ -353,22 +323,6 @@ def generar_cuotas_masivas(request):
                     fecha_vencimiento=timezone.now().date() + timedelta(days=residencial.dias_gracia),
                     estado='PENDIENTE'
                 )
-                
-                # --- NOTIFICACIÓN (SOLO SIMULACIÓN) ---
-                if dueno.email:
-                    print(f"📨 [SIMULACIÓN] MANTENIMIENTO A: {dueno.email}")
-                    asunto = f"Mantenimiento {timezone.now().strftime('%B')} - {residencial.nombre}"
-                    mensaje = f"""
-                    Hola {dueno.first_name},
-                    Se ha generado la cuota de mantenimiento del mes.
-                    TOTAL A PAGAR: ${nueva_factura.monto}
-                    """
-                    # NOTA: Comentamos el envío real para evitar errores
-                    # send_mail(asunto, mensaje, settings.EMAIL_HOST_USER, [dueno.email], fail_silently=False)
-                else:
-                    print(f"⚠️ EL USUARIO {dueno.username} NO TIENE EMAIL, SE SALTA EL ENVÍO.")
-                # -------------------------------------------
-                
                 contador += 1
     
     if contador > 0:
@@ -396,30 +350,21 @@ def cuentas_por_cobrar(request):
         'today': timezone.now().date()
     })
 
-# En core/views.py
-
-from decimal import Decimal # <--- IMPORTANTE: Agrega esto arriba con los imports
-
 @login_required
 def registrar_pago(request, factura_id):
     factura = get_object_or_404(Factura, pk=factura_id, residencial=request.user.residencial)
     
     if request.method == 'POST':
-        # 1. Obtenemos el monto que el administrador escribió en el formulario
+        # 1. Obtenemos el monto
         monto_recibido = Decimal(request.POST.get('monto_pagado', 0))
         
-        # 2. Validación básica
         if monto_recibido <= 0:
             messages.error(request, "⚠️ El monto debe ser mayor a 0.")
             return redirect('cuentas_por_cobrar')
 
-        # 3. Lógica de Negocio
-        # Asumimos que tu modelo Factura tiene un campo 'monto_pagado' (si no, avísame)
-        # Si no lo tiene, lo simulamos sumando al saldo pendiente.
-        
         deuda_actual = factura.monto - (factura.monto_pagado or 0)
         
-        # Actualizamos lo pagado en la factura
+        # Actualizamos lo pagado
         factura.monto_pagado = (factura.monto_pagado or 0) + monto_recibido
         factura.fecha_pago = timezone.now().date()
 
@@ -427,10 +372,8 @@ def registrar_pago(request, factura_id):
         if monto_recibido >= deuda_actual:
             factura.estado = 'PAGADO'
             factura.saldo_pendiente = 0
-            
             sobrante = monto_recibido - deuda_actual
             if sobrante > 0:
-                # Aquí podrías sumar al saldo a favor del usuario si tuvieras ese campo
                 messages.success(request, f"✅ Factura pagada. El vecino tiene un saldo a favor de ${sobrante:,.2f}")
             else:
                 messages.success(request, f"✅ Factura pagada correctamente.")
@@ -438,7 +381,6 @@ def registrar_pago(request, factura_id):
         # CASO B: Pago Parcial (Abono)
         else:
             factura.saldo_pendiente = deuda_actual - monto_recibido
-            # No cambiamos el estado a PAGADO, se queda en PENDIENTE (o podrías crear un estado ABONADO)
             messages.warning(request, f"💰 Abono registrado. Restan por pagar: ${factura.saldo_pendiente:,.2f}")
 
         factura.save()
@@ -656,11 +598,11 @@ def gestionar_incidencias(request):
     
     return render(request, 'core/gestionar_incidencias.html', {'incidencias': incidencias})
 
-
-# 1. VISTA PARA EDITAR DATOS (Nombre, Apto, Teléfono)
+# ---------------------------------------------
+# NUEVAS VISTAS: EDITAR Y CAMBIAR CLAVE
+# ---------------------------------------------
 @login_required
 def editar_vecino(request, user_id):
-    # Seguridad: Solo admin puede entrar
     if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
         return redirect('dashboard')
     
@@ -670,24 +612,21 @@ def editar_vecino(request, user_id):
         form = EditarVecinoForm(request.POST, instance=vecino)
         if form.is_valid():
             form.save()
-            messages.success(request, f"✅ Datos de {vecino.first_name} actualizados correctamente.")
+            messages.success(request, f"✅ Datos de {vecino.first_name} actualizados.")
             return redirect('lista_vecinos')
     else:
         form = EditarVecinoForm(instance=vecino)
 
     return render(request, 'core/vecino_form_edit.html', {'form': form, 'vecino': vecino})
 
-# 2. VISTA PARA CAMBIAR LA CLAVE (Reseteo manual)
 @login_required
 def cambiar_clave_vecino(request, user_id):
-    # Seguridad: Solo admin puede entrar
     if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
         return redirect('dashboard')
 
     vecino = get_object_or_404(Usuario, pk=user_id, residencial=request.user.residencial)
 
     if request.method == 'POST':
-        # SetPasswordForm permite cambiar la clave sin saber la vieja
         form = SetPasswordForm(vecino, request.POST)
         if form.is_valid():
             form.save()
