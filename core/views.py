@@ -8,10 +8,10 @@ from django.http import JsonResponse
 from django.utils import timezone   
 from datetime import datetime, timedelta 
 
-# --- IMPORTS PARA CORREO (OBLIGATORIOS) ---
+# --- IMPORTS PARA CORREO (Se mantienen por si activas a futuro) ---
 from django.core.mail import send_mail
 from django.conf import settings
-# ------------------------------------------
+# ------------------------------------------------------------------
 
 from .utils import enviar_whatsapp 
 from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia
@@ -211,7 +211,7 @@ def bloquear_fecha(request):
     return redirect('dashboard')
 
 # ---------------------------------------------
-# VISTA: Registrar Lectura Gas + Email (MODO DIAGNÓSTICO)
+# VISTA: Registrar Lectura Gas (CORREO DESACTIVADO/SIMULADO)
 # ---------------------------------------------
 @login_required
 def registrar_lectura_gas(request):
@@ -263,28 +263,18 @@ def registrar_lectura_gas(request):
                         lectura.factura_generada = nueva_factura
                         lectura.save()
                         
-                        # --- DIAGNÓSTICO DE CORREO (MODO AGRESIVO) ---
+                        # --- NOTIFICACIÓN (SOLO SIMULACIÓN) ---
                         if residente.email:
-                            print(f"📨 INTENTANDO ENVIAR CORREO A: {residente.email}") 
+                            print(f"📨 [SIMULACIÓN] Se hubiera enviado correo a: {residente.email}")
                             
                             asunto = f"Factura Gas - {request.user.residencial.nombre}"
                             mensaje = f"""
                             Hola {residente.first_name},
-
                             Se ha generado tu factura de consumo de GAS.
-
-                            ---------------------------------------
-                            Lectura Anterior: {lectura.lectura_anterior}
-                            Lectura Actual:   {lectura.lectura_actual}
-                            Consumo:          {lectura.consumo_galones:.2f} galones
-                            ---------------------------------------
-                            TOTAL A PAGAR:    ${lectura.total_a_pagar}
-                            Vencimiento:      {nueva_factura.fecha_vencimiento}
-                            ---------------------------------------
+                            TOTAL A PAGAR: ${lectura.total_a_pagar}
                             """
-                            
-                            # SIN try/except y con fail_silently=False para provocar el error si falla
-                            send_mail(asunto, mensaje, settings.EMAIL_HOST_USER, [residente.email], fail_silently=False)
+                            # NOTA: Comentamos el envío real para evitar errores en Railway
+                            # send_mail(asunto, mensaje, settings.EMAIL_HOST_USER, [residente.email], fail_silently=False)
                             
                         else:
                             print(f"⚠️ EL USUARIO {residente.username} NO TIENE CORREO REGISTRADO")
@@ -324,7 +314,7 @@ def registrar_lectura_gas(request):
     })
 
 # ---------------------------------------------
-# VISTA: Generar Cuotas Masivas + Email (MODO DIAGNÓSTICO)
+# VISTA: Generar Cuotas Masivas (CORREO DESACTIVADO/SIMULADO)
 # ---------------------------------------------
 @login_required
 def generar_cuotas_masivas(request):
@@ -363,23 +353,17 @@ def generar_cuotas_masivas(request):
                     estado='PENDIENTE'
                 )
                 
-                # --- DIAGNÓSTICO DE CORREO (MODO AGRESIVO) ---
+                # --- NOTIFICACIÓN (SOLO SIMULACIÓN) ---
                 if dueno.email:
-                    print(f"📨 INTENTANDO ENVIAR MANTENIMIENTO A: {dueno.email}")
+                    print(f"📨 [SIMULACIÓN] MANTENIMIENTO A: {dueno.email}")
                     asunto = f"Mantenimiento {timezone.now().strftime('%B')} - {residencial.nombre}"
                     mensaje = f"""
                     Hola {dueno.first_name},
-
                     Se ha generado la cuota de mantenimiento del mes.
-                    
-                    ---------------------------------------
-                    Concepto:      {nueva_factura.concepto}
                     TOTAL A PAGAR: ${nueva_factura.monto}
-                    Vencimiento:   {nueva_factura.fecha_vencimiento}
-                    ---------------------------------------
                     """
-                    # SIN try/except y con fail_silently=False
-                    send_mail(asunto, mensaje, settings.EMAIL_HOST_USER, [dueno.email], fail_silently=False)
+                    # NOTA: Comentamos el envío real para evitar errores
+                    # send_mail(asunto, mensaje, settings.EMAIL_HOST_USER, [dueno.email], fail_silently=False)
                 else:
                     print(f"⚠️ EL USUARIO {dueno.username} NO TIENE EMAIL, SE SALTA EL ENVÍO.")
                 # -------------------------------------------
@@ -387,7 +371,7 @@ def generar_cuotas_masivas(request):
                 contador += 1
     
     if contador > 0:
-        messages.success(request, f"✅ Se generaron y enviaron {contador} facturas de mantenimiento.")
+        messages.success(request, f"✅ Se generaron {contador} facturas de mantenimiento.")
     else:
         messages.info(request, "ℹ️ No se generaron facturas nuevas.")
         
@@ -634,60 +618,4 @@ def gestionar_incidencias(request):
     
     return render(request, 'core/gestionar_incidencias.html', {'incidencias': incidencias})
 
-    # --- core/views.py (AL FINAL DEL ARCHIVO) ---
-
-from django.http import HttpResponse
-
-
-# --- core/views.py (Reemplaza la función test_email_view) ---
-
-def test_email_view(request):
-    from django.http import HttpResponse
-    from django.core.mail import send_mail, get_connection
-    from django.conf import settings
-    import os
-    
-    # 1. Datos de Configuración
-    user_env = os.environ.get('EMAIL_HOST_USER', 'NO_CONFIGURADO')
-    host = settings.EMAIL_HOST
-    port = settings.EMAIL_PORT
-    
-    html = f"""
-    <h1>⚡ Prueba Rápida (Timeout 5s)</h1>
-    <ul>
-        <li><strong>Usuario:</strong> {user_env}</li>
-        <li><strong>Servidor:</strong> {host}:{port}</li>
-        <li><strong>SSL:</strong> {settings.EMAIL_USE_SSL} / <strong>TLS:</strong> {settings.EMAIL_USE_TLS}</li>
-    </ul>
-    <hr>
-    """
-    
-    try:
-        # 2. EL TRUCO: Creamos una conexión manual con solo 5 SEGUNDOS de paciencia
-        connection = get_connection(
-            backend=settings.EMAIL_BACKEND,
-            timeout=30  # <--- ESTO EVITA LA PANTALLA BLANCA ETERNA
-        )
-        
-        send_mail(
-            'Prueba Anti-Timeout',
-            'Si lees esto, logramos vencer el bloqueo.',
-            user_env,
-            ['jreynoso280988@gmail.com'], # <--- ¡PON TU EMAIL AQUÍ!
-            connection=connection, 
-            fail_silently=False
-        )
-        return HttpResponse(html + "<h2 style='color:green'>✅ ¡ÉXITO! Enviado.</h2>")
-
-    except Exception as e:
-        # 3. Si falla, mostramos el error EXACTO
-        return HttpResponse(html + f"""
-            <h2 style='color:red'>❌ ERROR CAPTURADO</h2>
-            <p>Django dice:</p>
-            <pre style='background:#f8d7da; padding:15px; border:2px solid red; font-size:16px;'>{e}</pre>
-            <p><strong>¿Qué hacer?</strong></p>
-            <ul>
-                <li>Si dice <strong>TimeoutError</strong>: Google está bloqueando la IP de Railway.</li>
-                <li>Si dice <strong>AuthenticationError</strong>: La contraseña en Railway está mal.</li>
-            </ul>
-        """)
+# --- FIN DEL ARCHIVO ---
