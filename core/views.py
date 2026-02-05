@@ -639,8 +639,56 @@ def gestionar_incidencias(request):
 from django.http import HttpResponse
 
 
-# --- core/views.py ---
-
 def test_email_view(request):
+    import os
     from django.http import HttpResponse
-    return HttpResponse("<h1 style='color:blue'>👋 HOLA MUNDO: La vista funciona</h1>")
+    from django.core.mail import send_mail
+    from django.conf import settings
+    
+    # 1. LEER VARIABLES DE ENTORNO (Lo que Railway ve)
+    # Usamos os.environ para ver la verdad cruda, no lo que dice settings.py
+    user_env = os.environ.get('EMAIL_HOST_USER', 'NO_ENCONTRADO')
+    pass_env = os.environ.get('EMAIL_HOST_PASSWORD', '')
+    
+    # Enmascaramos la clave para ver si tiene la longitud correcta (16 caracteres)
+    pass_status = f"Tiene {len(pass_env)} caracteres" if pass_env else "❌ ESTÁ VACÍA (Null)"
+    
+    html = f"""
+    <h1>🕵️‍♂️ Diagnóstico de Configuración</h1>
+    <ul>
+        <li><strong>Usuario (Variable de Entorno):</strong> {user_env}</li>
+        <li><strong>Contraseña:</strong> {pass_status}</li>
+        <li><strong>Host:</strong> {settings.EMAIL_HOST}</li>
+        <li><strong>Puerto:</strong> {settings.EMAIL_PORT}</li>
+        <li><strong>TLS Activado:</strong> {settings.EMAIL_USE_TLS}</li>
+    </ul>
+    <hr>
+    <h3>Intentando enviar correo...</h3>
+    """
+    
+    try:
+        # 2. INTENTO DE ENVÍO
+        send_mail(
+            'Prueba Final Railway',
+            'Si lees esto, ya puedes dormir tranquilo. El correo funciona.',
+            user_env, # Usamos el remitente configurado
+            ['jreynoso280988@gmail.com'], # <--- ¡CAMBIA ESTO POR TU EMAIL!
+            fail_silently=False
+        )
+        html += "<h2 style='color:green'>✅ ¡ÉXITO! Correo enviado.</h2>"
+        html += "<p>Revisa tu bandeja de entrada (o Spam).</p>"
+        
+    except Exception as e:
+        # 3. CAPTURA DEL ERROR
+        html += f"<h2 style='color:red'>❌ FALLÓ EL ENVÍO</h2>"
+        html += f"<p><strong>El error exacto es:</strong></p>"
+        html += f"<pre style='background:#f8d7da; padding:15px; border:1px solid red;'>{e}</pre>"
+        html += """
+        <p><strong>Posibles Soluciones:</strong></p>
+        <ul>
+            <li>Si dice <strong>AuthenticationError</strong>: La contraseña en Railway > Variables está mal. Debe ser la de Aplicación (16 letras), no la de tu Gmail normal.</li>
+            <li>Si dice <strong>NO_ENCONTRADO</strong>: No has creado las variables en Railway.</li>
+        </ul>
+        """
+
+    return HttpResponse(html)
