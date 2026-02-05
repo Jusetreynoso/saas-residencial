@@ -1,5 +1,7 @@
-from django.urls import path
+from django.contrib import admin
+from django.urls import path, include
 from . import views
+from core.views import test_email_view
 
 urlpatterns = [
     # Dashboard principal
@@ -46,4 +48,6 @@ urlpatterns = [
     path('incidencias/nueva/', views.crear_incidencia, name='crear_incidencia'),
     
     path('incidencias/gestion/', views.gestionar_incidencias, name='gestionar_incidencias'),
+
+    path('test-email/', test_email_view, name='test_email'),
 ]

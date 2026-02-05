@@ -633,3 +633,40 @@ def gestionar_incidencias(request):
     incidencias = Incidencia.objects.filter(residencial=request.user.residencial).order_by('estado', '-fecha_creacion')
     
     return render(request, 'core/gestionar_incidencias.html', {'incidencias': incidencias})
+
+    # --- core/views.py (AL FINAL DEL ARCHIVO) ---
+
+from django.http import HttpResponse
+
+def test_email_view(request):
+    try:
+        import os
+        from django.core.mail import send_mail
+        from django.conf import settings
+        
+        # Datos de depuración
+        usuario = settings.EMAIL_HOST_USER
+        clave_longitud = len(settings.EMAIL_HOST_PASSWORD) if settings.EMAIL_HOST_PASSWORD else 0
+        
+        debug_info = f"Usuario: {usuario} | Longitud Clave: {clave_longitud}"
+        print(debug_info)
+
+        send_mail(
+            'Prueba de Diagnóstico Railway',
+            f'Si lees esto, el sistema funciona perfectamente.\n\nDatos técnicos: {debug_info}',
+            usuario,
+            ['jreynoso280988@gmail.com'], # <--- ¡PON TU CORREO AQUÍ!
+            fail_silently=False
+        )
+        return HttpResponse(f"""
+            <h1 style='color:green'>✅ ¡ÉXITO!</h1>
+            <p>El correo fue enviado correctamente.</p>
+            <p>Configuración usada: {debug_info}</p>
+        """)
+    except Exception as e:
+        return HttpResponse(f"""
+            <h1 style='color:red'>❌ ERROR FATAL</h1>
+            <p>El correo falló por esta razón:</p>
+            <pre style='background:#eee; padding:10px; border:1px solid #999;'>{e}</pre>
+            <p>Configuración detectada: {usuario} (Clave: {clave_longitud} caracteres)</p>
+        """)
