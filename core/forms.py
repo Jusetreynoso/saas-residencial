@@ -177,3 +177,17 @@ class IncidenciaForm(forms.ModelForm):
             'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Detalles del problema...'}),
             'foto': forms.FileInput(attrs={'class': 'form-control'}),
         }
+
+# --- AL FINAL DE core/forms.py ---
+
+class EditarVecinoForm(forms.ModelForm):
+    class Meta:
+        model = Usuario
+        fields = ['first_name', 'last_name', 'email', 'telefono', 'apartamento']
+        widgets = {
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'telefono': forms.TextInput(attrs={'class': 'form-control'}),
+            'apartamento': forms.Select(attrs={'class': 'form-select'}),
+        }

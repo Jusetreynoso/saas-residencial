@@ -13,18 +13,6 @@ import os
 import dj_database_url
 from django.core.management.utils import get_random_secret_key
 from pathlib import Path
-import socket
-
-# --- INICIO DEL PARCHE RAILWAY ---
-# Forzar que todas las conexiones usen IPv4
-# Esto soluciona el "Network is unreachable" en Railway con Gmail
-def getaddrinfo_v4(host, port, family=0, type=0, proto=0, flags=0):
-    return orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
-
-orig_getaddrinfo = socket.getaddrinfo
-socket.getaddrinfo = getaddrinfo_v4
-socket.setdefaulttimeout(60)
-
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -91,7 +79,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 

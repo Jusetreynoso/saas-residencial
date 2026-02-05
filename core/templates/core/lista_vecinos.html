@@ -2,59 +2,94 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Directorio de Vecinos</title>
+    <title>Lista de Vecinos</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
+
 <div class="container mt-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>👥 Directorio de Vecinos</h2>
         <div>
-            <a href="{% url 'crear_vecino' %}" class="btn btn-primary fw-bold">➕ Nuevo Vecino</a>
-            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Volver</a>
+            <h2 class="mb-0">🏘️ Vecinos del Residencial</h2>
+            <p class="text-muted">Directorio de residentes registrados</p>
         </div>
+        <a href="{% url 'crear_vecino' %}" class="btn btn-primary fw-bold">
+            + Registrar Nuevo Vecino
+        </a>
     </div>
+    
+    <a href="{% url 'dashboard' %}" class="btn btn-secondary mb-3">⬅ Volver al Dashboard</a>
 
     {% if messages %}
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
         {% endfor %}
     {% endif %}
 
     <div class="card shadow">
         <div class="card-body p-0">
-            <table class="table table-hover mb-0">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Apto</th>
-                        <th>Nombre</th>
-                        <th>Usuario</th>
-                        <th>Email</th>
-                        <th>Teléfono</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for vecino in vecinos %}
-                    <tr>
-                        <td class="fw-bold">
-                            {% if vecino.apartamento %}
-                                {{ vecino.apartamento.numero }}
-                            {% else %}
-                                <span class="badge bg-warning text-dark">Sin Asignar</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ vecino.first_name }} {{ vecino.last_name }}</td>
-                        <td>{{ vecino.username }}</td>
-                        <td>{{ vecino.email }}</td>
-                        <td>{{ vecino.telefono|default:"--" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="5" class="text-center p-4">No hay vecinos registrados aún.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Apto</th>
+                            <th>Nombre</th>
+                            <th>Usuario</th>
+                            <th>Teléfono</th>
+                            <th>Rol</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vecino in vecinos %}
+                        <tr>
+                            <td class="fw-bold bg-light">
+                                {% if vecino.apartamento %}
+                                    {{ vecino.apartamento.numero }}
+                                {% else %}
+                                    <span class="badge bg-secondary">Sin Apto</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ vecino.first_name }} {{ vecino.last_name }}</td>
+                            <td>
+                                <span class="badge bg-light text-dark border">@{{ vecino.username }}</span>
+                            </td>
+                            <td>{{ vecino.telefono|default:"---" }}</td>
+                            <td>
+                                {% if vecino.rol == 'ADMIN_RESIDENCIAL' %}
+                                    <span class="badge bg-primary">Admin</span>
+                                {% else %}
+                                    <span class="badge bg-success">Residente</span>
+                                {% endif %}
+                            </td>
+                            
+                            <td class="text-end">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'editar_vecino' vecino.id %}" class="btn btn-warning btn-sm" title="Editar Datos Personales">
+                                        ✏️
+                                    </a>
+                                    <a href="{% url 'cambiar_clave_vecino' vecino.id %}" class="btn btn-dark btn-sm" title="Cambiar Contraseña">
+                                        🔑
+                                    </a>
+                                </div>
+                            </td>
+
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center p-5">No hay vecinos registrados aún.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

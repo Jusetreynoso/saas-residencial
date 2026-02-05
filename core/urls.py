@@ -48,4 +48,8 @@ urlpatterns = [
     path('incidencias/nueva/', views.crear_incidencia, name='crear_incidencia'),
     
     path('incidencias/gestion/', views.gestionar_incidencias, name='gestionar_incidencias'),
+
+    path('vecinos/editar/<int:user_id>/', views.editar_vecino, name='editar_vecino'),
+    
+    path('vecinos/clave/<int:user_id>/', views.cambiar_clave_vecino, name='cambiar_clave_vecino'),
 ]

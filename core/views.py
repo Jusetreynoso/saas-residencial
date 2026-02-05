@@ -1,3 +1,4 @@
+from django.contrib.auth.forms import SetPasswordForm
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages 
@@ -655,4 +656,44 @@ def gestionar_incidencias(request):
     
     return render(request, 'core/gestionar_incidencias.html', {'incidencias': incidencias})
 
-# --- FIN DEL ARCHIVO ---
+
+# 1. VISTA PARA EDITAR DATOS (Nombre, Apto, Teléfono)
+@login_required
+def editar_vecino(request, user_id):
+    # Seguridad: Solo admin puede entrar
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+    
+    vecino = get_object_or_404(Usuario, pk=user_id, residencial=request.user.residencial)
+
+    if request.method == 'POST':
+        form = EditarVecinoForm(request.POST, instance=vecino)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"✅ Datos de {vecino.first_name} actualizados correctamente.")
+            return redirect('lista_vecinos')
+    else:
+        form = EditarVecinoForm(instance=vecino)
+
+    return render(request, 'core/vecino_form_edit.html', {'form': form, 'vecino': vecino})
+
+# 2. VISTA PARA CAMBIAR LA CLAVE (Reseteo manual)
+@login_required
+def cambiar_clave_vecino(request, user_id):
+    # Seguridad: Solo admin puede entrar
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+
+    vecino = get_object_or_404(Usuario, pk=user_id, residencial=request.user.residencial)
+
+    if request.method == 'POST':
+        # SetPasswordForm permite cambiar la clave sin saber la vieja
+        form = SetPasswordForm(vecino, request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"🔑 Contraseña de {vecino.username} cambiada exitosamente.")
+            return redirect('lista_vecinos')
+    else:
+        form = SetPasswordForm(vecino)
+
+    return render(request, 'core/vecino_password_form.html', {'form': form, 'vecino': vecino})
