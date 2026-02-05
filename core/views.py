@@ -16,7 +16,7 @@ from django.conf import settings
 
 from .utils import enviar_whatsapp 
 from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia
-from .forms import ReservaForm, LecturaGasForm, GastoForm, AvisoForm, RegistroVecinoForm, IncidenciaForm
+from .forms import ReservaForm, LecturaGasForm, GastoForm, AvisoForm, RegistroVecinoForm, IncidenciaForm, EditarVecinoForm
 from django.db.models import Sum, Max
 
 # ---------------------------------------------
