@@ -666,7 +666,7 @@ def test_email_view(request):
         # 2. EL TRUCO: Creamos una conexión manual con solo 5 SEGUNDOS de paciencia
         connection = get_connection(
             backend=settings.EMAIL_BACKEND,
-            timeout=5  # <--- ESTO EVITA LA PANTALLA BLANCA ETERNA
+            timeout=30  # <--- ESTO EVITA LA PANTALLA BLANCA ETERNA
         )
         
         send_mail(
