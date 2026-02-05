@@ -168,13 +168,14 @@ AUTH_USER_MODEL = 'core.Usuario'
 LOGIN_REDIRECT_URL = '/'  # Al loguearse, ir al inicio
 LOGOUT_REDIRECT_URL = '/accounts/login/' # Al salir, ir al login
 
-# --- CONFIGURACIÓN DE CORREO (DINÁMICA) ---
+# --- CONFIGURACIÓN DE CORREO (PLAN B: OUTLOOK) ---
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 465
-EMAIL_USE_TLS = False
-EMAIL_USE_SSL = True
+EMAIL_HOST = 'smtp-mail.outlook.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
 
-# Leemos las variables de la nube. Si no existen, usa las de respaldo (tu PC).
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'saasresidencial@gmail.com')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'miak mqmn fmom qksu')
+# Credenciales (idealmente úsalas como variables de entorno en Railway)
+# Pero para probar rápido, puedes ponerlas aquí (luego bórralas por seguridad)
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'saasresidencial@outlook.com')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'bsmthfgrppnmslaa')
