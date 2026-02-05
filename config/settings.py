@@ -14,11 +14,6 @@ import dj_database_url
 from django.core.management.utils import get_random_secret_key
 from pathlib import Path
 
-# --- ☢️ ANTÍDOTO: BORRAR VARIABLE CORRUPTA ☢️ ---
-# Esto obliga a Django a olvidar la variable de la nube,
-# sin importar si tu terminal la tiene guardada o no.
-if 'DATABASE_URL' in os.environ:
-    del os.environ['DATABASE_URL']
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
