@@ -619,8 +619,11 @@ def editar_vecino(request, user_id):
 
     return render(request, 'core/vecino_form_edit.html', {'form': form, 'vecino': vecino})
 
+# En core/views.py
+
 @login_required
 def cambiar_clave_vecino(request, user_id):
+    # Seguridad: Solo admin puede entrar
     if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
         return redirect('dashboard')
 
@@ -629,7 +632,13 @@ def cambiar_clave_vecino(request, user_id):
     if request.method == 'POST':
         form = SetPasswordForm(vecino, request.POST)
         if form.is_valid():
-            form.save()
+            # --- CAMBIO: GUARDADO MANUAL "A LA FUERZA" ---
+            # En lugar de form.save(), tomamos el dato y lo inyectamos nosotros.
+            nueva_clave = form.cleaned_data['new_password1']
+            vecino.set_password(nueva_clave)
+            vecino.save()
+            # ---------------------------------------------
+            
             messages.success(request, f"🔑 Contraseña de {vecino.username} cambiada exitosamente.")
             return redirect('lista_vecinos')
     else:
