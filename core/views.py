@@ -63,7 +63,10 @@ def dashboard(request):
         # MÓDULO DE FINANZAS
         mis_facturas = Factura.objects.filter(usuario=user).order_by('-fecha_emision')
         context['mis_facturas'] = mis_facturas
-        context['total_pendiente'] = sum(f.monto for f in mis_facturas if f.estado == 'PENDIENTE')
+        context['total_pendiente'] = sum(
+            (f.saldo_pendiente if f.saldo_pendiente is not None else f.monto) 
+            for f in mis_facturas if f.estado == 'PENDIENTE'
+        )
 
     else:
         context['mensaje'] = "Usuario sin residencial asignado."
@@ -497,13 +500,29 @@ def ver_recibo(request, factura_id):
 
 
 # --- GESTIÓN DE VECINOS ---
+# En core/views.py
+
 @login_required
 def lista_vecinos(request):
     if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
         return redirect('dashboard')
     
-    # Buscamos usuarios que pertenezcan a este residencial
     vecinos = Usuario.objects.filter(residencial=request.user.residencial).order_by('apartamento__numero')
+    
+    # --- LÓGICA NUEVA: CALCULAR DEUDA POR VECINO ---
+    for vecino in vecinos:
+        # Buscamos sus facturas pendientes
+        deudas = Factura.objects.filter(usuario=vecino, estado='PENDIENTE')
+        
+        # Sumamos: Si tiene saldo_pendiente usamos eso, si no, usamos el monto total
+        total_deuda = sum(
+            (f.saldo_pendiente if f.saldo_pendiente is not None else f.monto) 
+            for f in deudas
+        )
+        
+        # "Pegamos" este dato temporalmente al vecino para usarlo en el HTML
+        vecino.deuda_calculada = total_deuda
+    # -----------------------------------------------
     
     return render(request, 'core/lista_vecinos.html', {'vecinos': vecinos})
 

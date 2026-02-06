@@ -176,6 +176,18 @@
 
         <div class="row">
             <div class="col-md-6">
+                {% if user.saldo_a_favor > 0 %}
+                <div class="alert alert-success d-flex align-items-center mb-3 shadow-sm border-success">
+                    <div style="font-size: 2rem; margin-right: 15px;">🤑</div>
+                    <div>
+                        <h5 class="alert-heading mb-0">¡Tienes Saldo a Favor!</h5>
+                        <p class="mb-0">
+                            Crédito disponible: <strong>${{ user.saldo_a_favor }}</strong>.
+                            <small class="d-block text-muted" style="line-height: 1;">Se descontará de tu próxima factura.</small>
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
                 <div class="card mb-3 shadow-sm">
                     <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                         <span class="fw-bold">💰 Estado de Cuenta</span>
@@ -207,8 +219,18 @@
                                             {% if factura.tipo == 'GAS' %}🔥 Gas{% else %}🏢 Cuota{% endif %}
                                         </div>
                                     </div>
+                                    
                                     <div class="text-end">
-                                        <span class="d-block fw-bold text-dark">${{ factura.monto }}</span>
+                                        {% if factura.estado == 'PAGADO' %}
+                                            <span class="d-block fw-bold text-dark">${{ factura.monto }}</span>
+                                        {% else %}
+                                            {% if factura.saldo_pendiente %}
+                                                <span class="d-block fw-bold text-danger">Restan: ${{ factura.saldo_pendiente }}</span>
+                                                <small class="d-block text-muted text-decoration-line-through" style="font-size: 0.8em;">Total: ${{ factura.monto }}</small>
+                                            {% else %}
+                                                <span class="d-block fw-bold text-dark">${{ factura.monto }}</span>
+                                            {% endif %}
+                                        {% endif %}
                                         
                                         {% if factura.estado == 'PENDIENTE' %}
                                             <span class="badge bg-warning text-dark">Pendiente</span>
@@ -221,7 +243,7 @@
                                             <span class="badge bg-danger">Vencido</span>
                                         {% endif %}
                                     </div>
-                                </div>
+                                    </div>
                             {% empty %}
                                 <div class="p-3 text-center text-muted">No tienes facturas registradas.</div>
                             {% endfor %}
@@ -259,7 +281,7 @@
                                        class="btn btn-outline-danger btn-sm" 
                                        onclick="return confirm('¿Estás seguro de que deseas CANCELAR esta reserva? Se liberará el espacio.')"
                                        title="Cancelar Reserva">
-                                        🗑️
+                                       🗑️
                                     </a>
                                 {% endif %}
                             </li>
