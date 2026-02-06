@@ -291,6 +291,8 @@ def registrar_lectura_gas(request):
 # ---------------------------------------------
 # VISTA: Generar Cuotas Masivas (CORREO DESACTIVADO/SIMULADO)
 # ---------------------------------------------
+# En core/views.py
+
 @login_required
 def generar_cuotas_masivas(request):
     if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
@@ -307,6 +309,7 @@ def generar_cuotas_masivas(request):
     
     for apto in apartamentos:
         dueno = apto.habitantes.first()
+        
         if dueno:
             existe = Factura.objects.filter(
                 residencial=residencial,
@@ -317,19 +320,44 @@ def generar_cuotas_masivas(request):
             ).exists()
             
             if not existe:
-                Factura.objects.create(
+                # 1. Creamos la factura normalmente (PENDIENTE por defecto)
+                nueva_factura = Factura.objects.create(
                     residencial=residencial,
                     usuario=dueno,
                     tipo='CUOTA',
                     concepto=f"Mantenimiento {timezone.now().strftime('%B %Y')}",
                     monto=apto.monto_cuota,
                     fecha_vencimiento=timezone.now().date() + timedelta(days=residencial.dias_gracia),
-                    estado='PENDIENTE'
+                    estado='PENDIENTE',
+                    saldo_pendiente=apto.monto_cuota # Inicialmente debe todo
                 )
+                
+                # 2. LÓGICA AUTOMÁTICA DE SALDO A FAVOR
+                if dueno.saldo_a_favor > 0:
+                    # CASO A: El saldo cubre toda la factura (Ej: Tiene 5000, factura 3000)
+                    if dueno.saldo_a_favor >= nueva_factura.monto:
+                        dueno.saldo_a_favor -= nueva_factura.monto
+                        nueva_factura.monto_pagado = nueva_factura.monto
+                        nueva_factura.saldo_pendiente = 0
+                        nueva_factura.estado = 'PAGADO'
+                        nueva_factura.fecha_pago = timezone.now().date()
+                        
+                    # CASO B: El saldo es menor a la factura (Ej: Tiene 100, factura 3000)
+                    else:
+                        abono = dueno.saldo_a_favor
+                        dueno.saldo_a_favor = 0 # Se gastó todo su saldo
+                        nueva_factura.monto_pagado = abono
+                        nueva_factura.saldo_pendiente = nueva_factura.monto - abono
+                        # Sigue en estado PENDIENTE, pero con menos deuda
+                    
+                    # Guardamos los cambios
+                    dueno.save()
+                    nueva_factura.save()
+
                 contador += 1
     
     if contador > 0:
-        messages.success(request, f"✅ Se generaron {contador} facturas de mantenimiento.")
+        messages.success(request, f"✅ Se generaron {contador} facturas (aplicando saldos a favor automáticamente).")
     else:
         messages.info(request, "ℹ️ No se generaron facturas nuevas.")
         
