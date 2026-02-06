@@ -381,12 +381,13 @@ def cuentas_por_cobrar(request):
         'today': timezone.now().date()
     })
 
+# En core/views.py
+
 @login_required
 def registrar_pago(request, factura_id):
     factura = get_object_or_404(Factura, pk=factura_id, residencial=request.user.residencial)
     
     if request.method == 'POST':
-        # 1. Obtenemos el monto
         monto_recibido = Decimal(request.POST.get('monto_pagado', 0))
         
         if monto_recibido <= 0:
@@ -395,7 +396,7 @@ def registrar_pago(request, factura_id):
 
         deuda_actual = factura.monto - (factura.monto_pagado or 0)
         
-        # Actualizamos lo pagado
+        # 1. Registramos el pago en la factura
         factura.monto_pagado = (factura.monto_pagado or 0) + monto_recibido
         factura.fecha_pago = timezone.now().date()
 
@@ -403,15 +404,29 @@ def registrar_pago(request, factura_id):
         if monto_recibido >= deuda_actual:
             factura.estado = 'PAGADO'
             factura.saldo_pendiente = 0
+            
             sobrante = monto_recibido - deuda_actual
+            
             if sobrante > 0:
-                messages.success(request, f"✅ Factura pagada. El vecino tiene un saldo a favor de ${sobrante:,.2f}")
+                vecino = factura.usuario
+                
+                # --- CORRECCIÓN DE SEGURIDAD ---
+                # Si el campo está vacío (None), lo convertimos a 0 antes de sumar
+                saldo_actual = vecino.saldo_a_favor if vecino.saldo_a_favor is not None else Decimal(0)
+                vecino.saldo_a_favor = saldo_actual + sobrante
+                # -------------------------------
+                
+                vecino.save() # Guardamos en la Base de Datos
+                
+                messages.success(request, f"✅ Pagado. Se abonaron ${sobrante:,.2f} al saldo a favor de {vecino.first_name}.")
             else:
-                messages.success(request, f"✅ Factura pagada correctamente.")
+                messages.success(request, f"✅ Factura pagada correctamente (Exacto).")
 
         # CASO B: Pago Parcial (Abono)
         else:
             factura.saldo_pendiente = deuda_actual - monto_recibido
+            # IMPORTANTE: Si es pago parcial, el estado sigue siendo PENDIENTE
+            # (Opcional: podrías ponerle un estado 'PARCIAL' si quisieras)
             messages.warning(request, f"💰 Abono registrado. Restan por pagar: ${factura.saldo_pendiente:,.2f}")
 
         factura.save()
