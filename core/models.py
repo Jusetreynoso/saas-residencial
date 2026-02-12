@@ -201,6 +201,7 @@ class Factura(models.Model):
     # --- CAMPOS AGREGADOS PARA PAGOS PARCIALES ---
     monto_pagado = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     saldo_pendiente = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    fecha_ultima_mora = models.DateField(null=True, blank=True, help_text="Fecha de la última aplicación de mora")
     # ---------------------------------------------
 
     def __str__(self):

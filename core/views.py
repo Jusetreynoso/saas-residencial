@@ -740,3 +740,67 @@ def cambiar_clave_vecino(request, user_id):
         form = SetPasswordForm(vecino)
 
     return render(request, 'core/vecino_password_form.html', {'form': form, 'vecino': vecino})
+
+# En core/views.py
+
+# En core/views.py
+
+@login_required
+def aplicar_moras(request):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+
+    residencial = request.user.residencial
+    hoy = timezone.now().date()
+    porcentaje = residencial.porcentaje_mora or 0
+    
+    if porcentaje <= 0:
+        messages.warning(request, "⚠️ No tienes configurado el porcentaje de mora en el Residencial.")
+        return redirect('dashboard')
+
+    # 1. Buscamos SOLO facturas de MANTENIMIENTO que se deban
+    facturas_pendientes = Factura.objects.filter(
+        residencial=residencial,
+        tipo='CUOTA',           # <--- OJO: Solo aplica a cuotas, no a Gas ni otros
+        estado='PENDIENTE',     # Que no estén pagadas
+        fecha_vencimiento__lt=hoy # Que ya hayan vencido
+    )
+    
+    contador = 0
+
+    for factura in facturas_pendientes:
+        aplicar = False
+        
+        # CASO 1: Nunca se le ha cobrado mora (es la primera vez)
+        if factura.fecha_ultima_mora is None:
+            aplicar = True
+            
+        # CASO 2: Ya se le cobró, pero verificamos si pasaron 30 días desde la última vez
+        else:
+            dias_pasados = (hoy - factura.fecha_ultima_mora).days
+            if dias_pasados >= 30:
+                aplicar = True
+
+        # --- APLICAMOS EL CASTIGO ---
+        if aplicar:
+            # Calculamos la mora sobre el SALDO PENDIENTE (lo justo) o sobre el MONTO ORIGINAL
+            # Aquí uso saldo_pendiente para que sea interés sobre deuda actual.
+            recargo = factura.saldo_pendiente * (porcentaje / 100)
+            
+            # Actualizamos valores
+            factura.monto += recargo
+            factura.saldo_pendiente += recargo
+            factura.concepto += f" (+{porcentaje}%)" # Agregamos marca al texto
+            
+            # IMPORTANTE: Guardamos la fecha de HOY para que no le vuelva a cobrar hasta dentro de 30 días
+            factura.fecha_ultima_mora = hoy 
+            
+            factura.save()
+            contador += 1
+
+    if contador > 0:
+        messages.success(request, f"✅ Se aplicó mora acumulativa a {contador} facturas de mantenimiento.")
+    else:
+        messages.info(request, "ℹ️ No hay facturas que cumplan el ciclo de mora hoy (o ya se les aplicó este mes).")
+
+    return redirect('dashboard')

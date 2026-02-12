@@ -92,6 +92,11 @@
                         
                         <a href="{% url 'reporte_financiero' %}" class="btn btn-info fw-bold text-white">📊 Reporte</a>
 
+                        <a href="{% url 'aplicar_moras' %}" 
+                           class="btn btn-outline-danger fw-bold"
+                           onclick="return confirm('¿Estás seguro? Esto buscará todas las facturas vencidas y les sumará el % de mora automáticamente.')">
+                           ⏳ Moras
+                        </a>
                         <button type="button" class="btn btn-dark fw-bold" data-bs-toggle="modal" data-bs-target="#modalAviso">📢 Aviso</button>
                         
                         <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalBloqueo">⛔ Bloqueo</button>
@@ -243,7 +248,7 @@
                                             <span class="badge bg-danger">Vencido</span>
                                         {% endif %}
                                     </div>
-                                    </div>
+                                </div>
                             {% empty %}
                                 <div class="p-3 text-center text-muted">No tienes facturas registradas.</div>
                             {% endfor %}
