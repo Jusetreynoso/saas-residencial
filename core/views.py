@@ -211,6 +211,8 @@ def bloquear_fecha(request):
 # ---------------------------------------------
 # VISTA: Registrar Lectura Gas (CORREO DESACTIVADO/SIMULADO)
 # ---------------------------------------------
+# En core/views.py
+
 @login_required
 def registrar_lectura_gas(request):
     if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
@@ -243,8 +245,11 @@ def registrar_lectura_gas(request):
                     lectura.save() 
                     
                     residente = lectura.apartamento.habitantes.first()
+                    
                     if residente:
                         consumo = lectura.lectura_actual - lectura.lectura_anterior
+                        
+                        # 1. Crear la factura (Nace PENDIENTE por defecto)
                         nueva_factura = Factura.objects.create(
                             residencial=request.user.residencial,
                             usuario=residente,
@@ -252,14 +257,42 @@ def registrar_lectura_gas(request):
                             concepto=f"Gas: {lectura.lectura_anterior} -> {lectura.lectura_actual} ({consumo:.2f} gls)",
                             monto=lectura.total_a_pagar,
                             fecha_vencimiento=timezone.now().date() + timedelta(days=15),
-                            estado='PENDIENTE'
+                            estado='PENDIENTE',
+                            saldo_pendiente=lectura.total_a_pagar # Inicialmente debe todo
                         )
+                        
+                        # --- LÓGICA AUTOMÁTICA DE SALDO A FAVOR (NUEVO) ---
+                        msg_extra = ""
+                        if residente.saldo_a_favor > 0:
+                            # CASO A: El saldo cubre toda la factura
+                            if residente.saldo_a_favor >= nueva_factura.monto:
+                                residente.saldo_a_favor -= nueva_factura.monto
+                                nueva_factura.monto_pagado = nueva_factura.monto
+                                nueva_factura.saldo_pendiente = 0
+                                nueva_factura.estado = 'PAGADO'
+                                nueva_factura.fecha_pago = timezone.now().date()
+                                msg_extra = " (✅ Pagada con saldo a favor)"
+                            
+                            # CASO B: El saldo es menor a la factura (Abono parcial)
+                            else:
+                                abono = residente.saldo_a_favor
+                                residente.saldo_a_favor = 0 # Se gasta todo
+                                nueva_factura.monto_pagado = abono
+                                nueva_factura.saldo_pendiente = nueva_factura.monto - abono
+                                # Sigue PENDIENTE, pero debe menos
+                                msg_extra = f" (💰 Se descontaron ${abono} de su saldo)"
+        
+                            # Guardamos los cambios
+                            residente.save()
+                            nueva_factura.save()
+                        # --------------------------------------------------
+
                         lectura.factura_generada = nueva_factura
                         lectura.save()
                         
-                        messages.success(request, f"✅ Factura generada para {apartamento.numero}: ${lectura.total_a_pagar}")
+                        messages.success(request, f"✅ Factura generada para {apartamento.numero}: ${lectura.total_a_pagar}{msg_extra}")
                     else:
-                        messages.warning(request, f"⚠️ Lectura guardada, pero el apto {apartamento.numero} no tiene dueño asignado.")
+                        messages.warning(request, f"⚠️ Lectura guardada, pero el apto {apartamento.numero} no tiene dueño asignado (No se generó factura).")
                 
             return redirect('registrar_lectura_gas')
     else:
