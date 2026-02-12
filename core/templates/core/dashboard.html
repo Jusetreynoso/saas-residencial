@@ -229,7 +229,7 @@
                                         {% if factura.estado == 'PAGADO' %}
                                             <span class="d-block fw-bold text-dark">${{ factura.monto }}</span>
                                         {% else %}
-                                            {% if factura.saldo_pendiente %}
+                                            {% if factura.saldo_pendiente and factura.saldo_pendiente < factura.monto %}
                                                 <span class="d-block fw-bold text-danger">Restan: ${{ factura.saldo_pendiente }}</span>
                                                 <small class="d-block text-muted text-decoration-line-through" style="font-size: 0.8em;">Total: ${{ factura.monto }}</small>
                                             {% else %}
@@ -248,7 +248,7 @@
                                             <span class="badge bg-danger">Vencido</span>
                                         {% endif %}
                                     </div>
-                                </div>
+                                    </div>
                             {% empty %}
                                 <div class="p-3 text-center text-muted">No tienes facturas registradas.</div>
                             {% endfor %}
