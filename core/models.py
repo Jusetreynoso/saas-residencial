@@ -192,7 +192,7 @@ class Factura(models.Model):
     concepto = models.CharField(max_length=100)
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     
-    fecha_emision = models.DateField(auto_now_add=True)
+    fecha_emision = models.DateField(default=timezone.now)
     fecha_vencimiento = models.DateField()
     fecha_pago = models.DateField(null=True, blank=True)
     
