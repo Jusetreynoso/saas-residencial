@@ -125,53 +125,65 @@ def gestionar_reserva(request, reserva_id, accion):
     reserva.save()
     return redirect('dashboard')
 
+
 @login_required
-def obtener_eventos_calendario(request):
+def api_eventos(request):
     residencial = request.user.residencial
+    
+    # 1. Buscamos solo las reservas APROBADAS
+    reservas = Reserva.objects.filter(
+        residencial=residencial,
+        estado='APROBADA'
+    )
+    
+    # 2. Buscamos los bloqueos de fechas
+    bloqueos = BloqueoFecha.objects.filter(residencial=residencial)
+    
     eventos = []
 
-    bloqueos = BloqueoFecha.objects.filter(residencial=residencial)
-    for b in bloqueos:
+    # --- PROCESAMIENTO DE RESERVAS ---
+    for reserva in reservas:
+        # Formateamos la hora para que sea legible (Ej: 02:00 PM - 06:00 PM)
+        if reserva.hora_inicio and reserva.hora_fin:
+            inicio = reserva.hora_inicio.strftime("%I:%M %p")
+            fin = reserva.hora_fin.strftime("%I:%M %p")
+            horario = f"({inicio} - {fin})"
+        else:
+            horario = "(Todo el día)"
+
+        # Decidimos QUÉ mostrar según quién mira el calendario
+        if request.user.rol in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+            # El ADMIN ve: "B-201 (02:00 PM - 06:00 PM)"
+            numero_apto = reserva.usuario.apartamento.numero if (reserva.usuario and reserva.usuario.apartamento) else "Sin Apto"
+            titulo = f"📅 {numero_apto} {horario}"
+            color = '#0d6efd' # Azul
+            
+        elif reserva.usuario == request.user:
+            # EL DUEÑO ve: "Tu Reserva (02:00 PM - 06:00 PM)"
+            titulo = f"✅ Tu Reserva {horario}"
+            color = '#198754' # Verde
+            
+        else:
+            # EL VECINO ve: "Reservado (02:00 PM - 06:00 PM)"
+            titulo = f"⛔ Reservado {horario}"
+            color = '#dc3545' # Rojo
+
+        # Agregamos el evento al calendario
         eventos.append({
-            'title': f"⛔ {b.motivo}",
-            'start': b.fecha.strftime("%Y-%m-%d"),
-            'display': 'background',
-            'color': '#000000',
-            'allDay': True
+            'title': titulo,
+            'start': reserva.fecha_solicitud.isoformat(),
+            'color': color,
+            'allDay': True  # Muestra el bloque completo para indicar que el día ya tiene uso
         })
 
-    reservas = Reserva.objects.filter(residencial=residencial, estado='APROBADA')
-    
-    for r in reservas:
-        titulo = "Reservado"
-        color = "#dc3545"
-        
-        if request.user.rol in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
-            titulo = f"{r.area_social.nombre} - {r.usuario.username}"
-        elif r.usuario == request.user:
-            titulo = f"Mi Reserva: {r.area_social.nombre}"
-            color = "#198754"
-
-        start_str = r.fecha_solicitud.strftime("%Y-%m-%d")
-        
-        if r.hora_inicio and r.hora_fin:
-             start_iso = datetime.combine(r.fecha_solicitud, r.hora_inicio).isoformat()
-             end_iso = datetime.combine(r.fecha_solicitud, r.hora_fin).isoformat()
-             
-             eventos.append({
-                'title': titulo,
-                'start': start_iso,
-                'end': end_iso,
-                'color': color,
-                'allDay': False
-             })
-        else:
-             eventos.append({
-                'title': titulo,
-                'start': start_str,
-                'color': color,
-                'allDay': True
-             })
+    # --- PROCESAMIENTO DE BLOQUEOS ---
+    for bloqueo in bloqueos:
+        eventos.append({
+            'title': f"🔒 {bloqueo.motivo}",
+            'start': bloqueo.fecha.strftime("%Y-%m-%d"),
+            'color': '#212529', # Negro/Gris oscuro
+            'allDay': True
+        })
 
     return JsonResponse(eventos, safe=False)
 

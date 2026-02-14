@@ -17,7 +17,7 @@ urlpatterns = [
     path('cancelar-reserva/<int:reserva_id>/', views.cancelar_reserva, name='cancelar_reserva'),
 
     # API Calendario (Datos JSON)
-    path('api/eventos/', views.obtener_eventos_calendario, name='api_eventos'),
+    path('api/eventos/', views.api_eventos, name='api_eventos'),
 
     # --- ESTA ES LA QUE TE FALTABA (Bloquear Fecha) ---
     path('bloquear-fecha/', views.bloquear_fecha, name='bloquear_fecha'),
