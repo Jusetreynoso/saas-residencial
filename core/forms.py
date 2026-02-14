@@ -192,3 +192,32 @@ class EditarVecinoForm(forms.ModelForm):
             'telefono': forms.TextInput(attrs={'class': 'form-control'}),
             'apartamento': forms.Select(attrs={'class': 'form-select'}),
         }
+
+
+class AbonoForm(forms.Form):
+    usuario = forms.ModelChoiceField(
+        queryset=Usuario.objects.none(), 
+        label="Vecino",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    monto = forms.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        label="Monto a Abonar",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00'})
+    )
+    concepto = forms.CharField(
+        max_length=100, 
+        label="Concepto / Nota",
+        initial="Pago Adelantado",
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Adelanto Marzo 2026'})
+    )
+
+    def __init__(self, admin_user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filtramos para mostrar solo vecinos de TU residencial
+        if admin_user:
+            self.fields['usuario'].queryset = Usuario.objects.filter(
+                residencial=admin_user.residencial,
+                rol='RESIDENTE'
+            ).order_by('apartamento__numero')

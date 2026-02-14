@@ -54,4 +54,6 @@ urlpatterns = [
     path('vecinos/clave/<int:user_id>/', views.cambiar_clave_vecino, name='cambiar_clave_vecino'),
 
     path('aplicar-moras/', views.aplicar_moras, name='aplicar_moras'),
+
+    path('registrar-abono/', views.registrar_abono, name='registrar_abono'),
 ]

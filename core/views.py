@@ -12,9 +12,7 @@ from decimal import Decimal
 # --- IMPORTS PARA CORREO (Se mantienen por si activas a futuro) ---
 from django.core.mail import send_mail
 from django.conf import settings
-from django.contrib.auth.forms import SetPasswordForm # <--- Para cambiar claves
-
-# --- AQUÍ ESTÁ LA CORRECCIÓN: Agregamos EditarVecinoForm ---
+from django.contrib.auth.forms import SetPasswordForm 
 from .forms import (
     ReservaForm, 
     LecturaGasForm, 
@@ -22,7 +20,8 @@ from .forms import (
     AvisoForm, 
     RegistroVecinoForm, 
     IncidenciaForm,
-    EditarVecinoForm # <--- ¡ESTE ERA EL QUE FALTABA!
+    EditarVecinoForm,
+    AbonoForm
 )
 
 from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia
@@ -816,3 +815,44 @@ def aplicar_moras(request):
         messages.info(request, "ℹ️ No hay facturas que cumplan el ciclo de mora hoy (o ya se les aplicó este mes).")
 
     return redirect('dashboard')
+
+@login_required
+def registrar_abono(request):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = AbonoForm(request.user, request.POST)
+        if form.is_valid():
+            vecino = form.cleaned_data['usuario']
+            monto = form.cleaned_data['monto']
+            concepto = form.cleaned_data['concepto']
+
+            # 1. Aumentamos el Saldo a Favor REAL del vecino
+            # (Usamos 'or 0' por seguridad si el campo está vacío)
+            saldo_actual = vecino.saldo_a_favor if vecino.saldo_a_favor else Decimal(0)
+            vecino.saldo_a_favor = saldo_actual + monto
+            vecino.save()
+
+            # 2. Creamos un registro "Factura Pagada" para el historial
+            # Esto sirve para que el vecino vea en su estado de cuenta que pagó ese dinero
+            Factura.objects.create(
+                residencial=request.user.residencial,
+                usuario=vecino,
+                tipo='OTRO', # Usamos 'OTRO' para diferenciarlo de cuotas normales
+                concepto=f"🟢 ABONO: {concepto}",
+                monto=monto,
+                monto_pagado=monto,
+                estado='PAGADO', # Nace pagada
+                fecha_emision=timezone.now().date(),
+                fecha_vencimiento=timezone.now().date(),
+                fecha_pago=timezone.now().date(),
+                saldo_pendiente=0
+            )
+
+            messages.success(request, f"✅ Abono de ${monto} registrado exitosamente para {vecino.first_name}. Nuevo saldo a favor: ${vecino.saldo_a_favor}")
+            return redirect('cuentas_por_cobrar')
+    else:
+        form = AbonoForm(request.user)
+
+    return render(request, 'core/registrar_abono.html', {'form': form})
