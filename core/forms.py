@@ -194,6 +194,7 @@ class EditarVecinoForm(forms.ModelForm):
         }
 
 
+
 class AbonoForm(forms.Form):
     usuario = forms.ModelChoiceField(
         queryset=Usuario.objects.none(), 
@@ -215,7 +216,6 @@ class AbonoForm(forms.Form):
 
     def __init__(self, admin_user, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Filtramos para mostrar solo vecinos de TU residencial
         if admin_user:
             self.fields['usuario'].queryset = Usuario.objects.filter(
                 residencial=admin_user.residencial,
