@@ -1,15 +1,36 @@
-{% extends 'core/base.html' %} 
-
-{% block content %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Registrar Abono</title>
+    <title>Registrar Abono - SaaS Residencial</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
 
-<div class="container mt-5">
+<nav class="navbar navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'dashboard' %}">🏢 Sistema Residencial</a>
+        <span class="navbar-text text-white">
+            Hola, {{ user.username }} | 
+            <form action="{% url 'logout' %}" method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-link text-white fw-bold p-0 text-decoration-none">Salir</button>
+            </form>
+        </span>
+    </div>
+</nav>
+
+<div class="container">
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
     <div class="row justify-content-center">
         <div class="col-md-6">
             <div class="card shadow">
@@ -18,7 +39,9 @@
                 </div>
                 <div class="card-body">
                     <p class="text-muted small">
-                        Registra un pago sin factura previa. Se sumará al <strong>Saldo a Favor</strong> del vecino.
+                        Use esta opción cuando un vecino paga por adelantado o abona saldo extra. 
+                        Este dinero se guardará como <strong>Saldo a Favor</strong> y se descontará 
+                        automáticamente de futuras facturas.
                     </p>
                     
                     <form method="post">
@@ -35,21 +58,23 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Concepto</label>
+                            <label class="form-label fw-bold">Concepto / Nota</label>
                             {{ form.concepto }}
                         </div>
 
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-success fw-bold">💾 Guardar Abono</button>
-                            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancelar</a>
+                            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancelar y Volver</a>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
+
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>
-{% endblock %}
