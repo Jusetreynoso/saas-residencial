@@ -25,7 +25,7 @@
             <div class="card text-white bg-success shadow h-100">
                 <div class="card-body text-center">
                     <h6 class="text-uppercase opacity-75">Ingresos Totales ({{ anio }})</h6>
-                    <h2 class="display-6 fw-bold">${{ total_ingresos|floatform:2 }}</h2>
+                    <h2 class="display-6 fw-bold">${{ total_ingresos|floatformat:2 }}</h2>
                 </div>
             </div>
         </div>
@@ -33,7 +33,7 @@
             <div class="card text-white bg-danger shadow h-100">
                 <div class="card-body text-center">
                     <h6 class="text-uppercase opacity-75">Gastos Totales ({{ anio }})</h6>
-                    <h2 class="display-6 fw-bold">${{ total_gastos|floatform:2 }}</h2>
+                    <h2 class="display-6 fw-bold">${{ total_gastos|floatformat:2 }}</h2>
                 </div>
             </div>
         </div>
@@ -41,7 +41,7 @@
             <div class="card text-white bg-primary shadow h-100">
                 <div class="card-body text-center">
                     <h6 class="text-uppercase opacity-75">Balance Neto</h6>
-                    <h2 class="display-6 fw-bold">${{ balance|floatform:2 }}</h2>
+                    <h2 class="display-6 fw-bold">${{ balance|floatformat:2 }}</h2>
                     <small>{% if balance >= 0 %}📈 Superávit{% else %}📉 Déficit{% endif %}</small>
                 </div>
             </div>
