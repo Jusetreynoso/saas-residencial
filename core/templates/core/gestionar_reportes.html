@@ -1,45 +1,109 @@
-{% extends 'core/base.html' %}
-{% block content %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Comprobantes - SaaS Residencial</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'dashboard' %}">🏢 Volver al Dashboard</a>
+        <span class="navbar-text text-white">
+            Hola, {{ user.username }} | 
+            <form action="{% url 'logout' %}" method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-link text-white fw-bold p-0 text-decoration-none">Salir</button>
+            </form>
+        </span>
+    </div>
+</nav>
+
 <div class="container mt-4">
-    <h2>📸 Gestión de Comprobantes</h2>
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <h2 class="mb-4">📸 Gestión de Comprobantes de Pago</h2>
     
     {% for reporte in reportes %}
-    <div class="card mb-3 shadow-sm border-{% if reporte.estado == 'PENDIENTE' %}warning{% elif reporte.estado == 'APROBADO' %}success{% else %}danger{% endif %}">
-        <div class="card-header d-flex justify-content-between">
-            <strong>{{ reporte.usuario.apartamento.numero }} - {{ reporte.usuario.first_name }}</strong>
-            <span>{{ reporte.fecha_reporte|date:"d M Y H:i" }}</span>
+    <div class="card mb-4 shadow-sm border-{% if reporte.estado == 'PENDIENTE' %}warning{% elif reporte.estado == 'APROBADO' %}success{% else %}danger{% endif %}">
+        <div class="card-header d-flex justify-content-between align-items-center {% if reporte.estado == 'PENDIENTE' %}bg-warning-subtle{% endif %}">
+            <h5 class="mb-0">
+                Apto {{ reporte.usuario.apartamento.numero }} - {{ reporte.usuario.first_name }} {{ reporte.usuario.last_name }}
+            </h5>
+            <span class="badge bg-secondary">{{ reporte.fecha_reporte|date:"d M Y H:i" }}</span>
         </div>
         <div class="card-body">
             <div class="row">
-                <div class="col-md-4">
+                <div class="col-md-4 text-center">
                     {% if reporte.comprobante %}
                         <a href="{{ reporte.comprobante.url }}" target="_blank">
-                            <img src="{{ reporte.comprobante.url }}" class="img-fluid rounded" style="max-height: 150px;">
+                            <img src="{{ reporte.comprobante.url }}" class="img-fluid rounded border" style="max-height: 200px;">
                         </a>
-                        <br><small class="text-muted">Clic para ampliar</small>
+                        <div class="mt-2">
+                            <a href="{{ reporte.comprobante.url }}" target="_blank" class="btn btn-sm btn-outline-primary">🔍 Ver Imagen Grande</a>
+                        </div>
                     {% else %}
-                        <span class="text-muted">Sin imagen</span>
+                        <div class="alert alert-secondary py-5">🚫 Sin imagen adjunta</div>
                     {% endif %}
                 </div>
+
                 <div class="col-md-8">
-                    <h4>Monto Reportado: ${{ reporte.monto }}</h4>
-                    <p><strong>Nota:</strong> {{ reporte.nota_usuario }}</p>
-                    <p><strong>Estado:</strong> {{ reporte.get_estado_display }}</p>
+                    <h3 class="fw-bold text-success">${{ reporte.monto }}</h3>
+                    <p class="mb-1"><strong>Nota del Vecino:</strong></p>
+                    <div class="alert alert-light border mb-3">
+                        {{ reporte.nota_usuario|default:"Sin nota" }}
+                    </div>
+                    
+                    <p><strong>Estado Actual:</strong> 
+                        {% if reporte.estado == 'PENDIENTE' %}
+                            <span class="badge bg-warning text-dark">⏳ Pendiente de Revisión</span>
+                        {% elif reporte.estado == 'APROBADO' %}
+                            <span class="badge bg-success">✅ Aprobado</span>
+                        {% else %}
+                            <span class="badge bg-danger">❌ Rechazado</span>
+                        {% endif %}
+                    </p>
 
                     {% if reporte.estado == 'PENDIENTE' %}
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="reporte_id" value="{{ reporte.id }}">
-                        <button type="submit" name="accion" value="aprobar" class="btn btn-success">✅ Aprobar y Sumar Saldo</button>
-                        <button type="submit" name="accion" value="rechazar" class="btn btn-danger">❌ Rechazar</button>
-                    </form>
+                    <hr>
+                    <div class="d-flex gap-2">
+                        <form method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="reporte_id" value="{{ reporte.id }}">
+                            <button type="submit" name="accion" value="aprobar" class="btn btn-success fw-bold" onclick="return confirm('¿Confirmas que recibiste el dinero? Se sumará al saldo del vecino.')">
+                                ✅ Aprobar y Sumar Saldo
+                            </button>
+                        </form>
+
+                        <form method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="reporte_id" value="{{ reporte.id }}">
+                            <button type="submit" name="accion" value="rechazar" class="btn btn-danger fw-bold" onclick="return confirm('¿Rechazar este pago?')">
+                                ❌ Rechazar
+                            </button>
+                        </form>
+                    </div>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
     {% empty %}
-    <div class="alert alert-info">No hay reportes de pago recientes.</div>
+    <div class="alert alert-info text-center py-5">
+        <h4>🎉 ¡Todo limpio!</h4>
+        <p>No hay reportes de pago pendientes de revisión.</p>
+    </div>
     {% endfor %}
 </div>
-{% endblock %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
