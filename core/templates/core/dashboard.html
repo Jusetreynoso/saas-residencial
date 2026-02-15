@@ -4,31 +4,46 @@
     <meta charset="UTF-8">
     <title>SaaS Residencial</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
     
     <style>
-        /* Estilos para que el calendario se vea profesional */
         .fc-event { cursor: pointer; }
-        .fc-day-today { background-color: #f0f8ff !important; } /* Resalta el día de hoy */
+        .fc-day-today { background-color: #f0f8ff !important; }
+        
+        /* Estilos para las tarjetas de menú */
+        .card-menu {
+            transition: transform 0.2s;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .card-menu:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+        .icon-box {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body class="bg-light">
 
-<nav class="navbar navbar-dark bg-primary mb-4">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow">
     <div class="container">
-        <a class="navbar-brand" href="#">🏢 Sistema Residencial</a>
-        <span class="navbar-text text-white">
-            Hola, {{ user.username }} | 
+        <a class="navbar-brand fw-bold" href="#">🏢 Sistema Residencial</a>
+        <div class="d-flex align-items-center text-white">
+            <span class="me-3">Hola, {{ user.username }}</span>
             <form action="{% url 'logout' %}" method="post" style="display:inline;">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-link text-white fw-bold p-0 text-decoration-none">Salir</button>
+                <button type="submit" class="btn btn-outline-light btn-sm fw-bold">Salir</button>
             </form>
-        </span>
+        </div>
     </div>
 </nav>
 
-<div class="container">
+<div class="container pb-5">
 
     {% if messages %}
         {% for message in messages %}
@@ -41,90 +56,131 @@
     
     {% if user.is_superuser %}
         <div class="alert alert-info">Vista de Super Administrador</div>
-        <div class="row">
-            <div class="col-md-4">
-                <div class="card text-center p-3">
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card text-center p-4 card-menu">
                     <h3>{{ total_residenciales }}</h3>
-                    <p>Residenciales Activos</p>
+                    <p class="text-muted">Residenciales Activos</p>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card text-center p-3">
+            <div class="col-md-6">
+                <div class="card text-center p-4 card-menu">
                     <h3>{{ total_usuarios }}</h3>
-                    <p>Usuarios Registrados</p>
+                    <p class="text-muted">Usuarios Totales</p>
                 </div>
             </div>
         </div>
+    {% endif %}
 
-        <h3 class="mt-4">Listado Global</h3>
-        <ul class="list-group">
-            {% for res in residenciales %}
-                <li class="list-group-item">{{ res.nombre }} - {{ res.direccion }}</li>
-            {% endfor %}
-        </ul>
-
-    {% elif user.residencial %}
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-             <h2 class="mb-0">Bienvenido a {{ mi_residencial.nombre }}</h2>
+    {% if user.residencial %}
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+             <div>
+                 <h2 class="mb-0 fw-bold text-primary">👋 Bienvenido a {{ mi_residencial.nombre }}</h2>
+                 <p class="text-muted mb-0">Panel de Control General</p>
+             </div>
              
              <div class="d-flex gap-2">
-                 <button type="button" class="btn btn-danger fw-bold" data-bs-toggle="modal" data-bs-target="#modalIncidencia">
+                 <button type="button" class="btn btn-danger shadow-sm" data-bs-toggle="modal" data-bs-target="#modalIncidencia">
                     🚨 Reportar Avería
                  </button>
-
-                 <a href="{% url 'reportar_pago' %}" class="btn btn-success fw-bold">
+                 <a href="{% url 'reportar_pago' %}" class="btn btn-success shadow-sm">
                     📸 Reportar Pago
                  </a>
-
-                 {% if user.rol == 'ADMIN_RESIDENCIAL' or user.is_superuser %}
-                    <div class="btn-group">
-                        <a href="{% url 'lista_vecinos' %}" class="btn btn-outline-dark fw-bold">👥 Vecinos</a>
-
-                        <a href="{% url 'gestionar_incidencias' %}" class="btn btn-outline-danger fw-bold">🛠️ Tickets</a>
-
-                        <a href="{% url 'generar_cuotas_masivas' %}" 
-                           class="btn btn-primary fw-bold"
-                           onclick="return confirm('¿Estás seguro de generar las cuotas de MANTENIMIENTO para todos los apartamentos de este mes?')">
-                           🏢 Cuotas
-                        </a>
-                        
-                        <a href="{% url 'registrar_lectura_gas' %}" class="btn btn-warning fw-bold">🔥 Gas</a>
-                        
-                        <a href="{% url 'cuentas_por_cobrar' %}" class="btn btn-success fw-bold">💸 Cobros</a>
-
-                        <a href="{% url 'registrar_abono' %}" class="btn btn-outline-success fw-bold">
-                            ➕ Abono
-                        </a>
-
-                        <a href="{% url 'gestionar_reportes_pago' %}" class="btn btn-warning fw-bold border-dark">
-                            📸 Validar Pagos
-                        </a>
-
-                        <a href="{% url 'registrar_gasto' %}" class="btn btn-secondary fw-bold">📉 Gastos</a>
-                        
-                        <a href="{% url 'reporte_financiero' %}" class="btn btn-info fw-bold text-white">📊 Reporte</a>
-
-                        <a href="{% url 'balance_residencial' %}" class="btn btn-dark fw-bold border-white">
-                            🏦 Balance Global
-                        </a>
-
-                        <a href="{% url 'aplicar_moras' %}" 
-                           class="btn btn-outline-danger fw-bold"
-                           onclick="return confirm('¿Estás seguro? Esto buscará todas las facturas vencidas y les sumará el % de mora automáticamente.')">
-                           ⏳ Moras
-                        </a>
-                        <button type="button" class="btn btn-dark fw-bold" data-bs-toggle="modal" data-bs-target="#modalAviso">📢 Aviso</button>
-                        
-                        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalBloqueo">⛔ Bloqueo</button>
-                    </div>
-                 {% endif %}
              </div>
         </div>
 
+        {% if user.rol == 'ADMIN_RESIDENCIAL' or user.is_superuser %}
+        
+        <h5 class="text-muted mb-3 border-bottom pb-2">🛠️ Herramientas Administrativas</h5>
+        
+        <div class="row g-4 mb-5">
+            
+            <div class="col-md-4">
+                <div class="card h-100 border-success border-top-0 border-end-0 border-bottom-0 border-3 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title text-success fw-bold">💰 Finanzas</h5>
+                        <hr>
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'gestionar_reportes_pago' %}" class="btn btn-warning fw-bold text-dark">
+                                📸 Validar Pagos (Pendientes)
+                            </a>
+                            <div class="btn-group">
+                                <a href="{% url 'cuentas_por_cobrar' %}" class="btn btn-outline-success">💸 Cobros</a>
+                                <a href="{% url 'balance_residencial' %}" class="btn btn-outline-success">🏦 Balance</a>
+                            </div>
+                            <div class="btn-group">
+                                <a href="{% url 'registrar_abono' %}" class="btn btn-sm btn-outline-dark">➕ Abono</a>
+                                <a href="{% url 'registrar_gasto' %}" class="btn btn-sm btn-outline-secondary">📉 Gastos</a>
+                            </div>
+                            <a href="{% url 'reporte_financiero' %}" class="btn btn-sm btn-light border">📊 Ver Reporte Mensual</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 border-primary border-top-0 border-end-0 border-bottom-0 border-3 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary fw-bold">👥 Gestión</h5>
+                        <hr>
+                        <div class="d-grid gap-2">
+                            <div class="btn-group">
+                                <a href="{% url 'lista_vecinos' %}" class="btn btn-primary">👥 Vecinos</a>
+                                <a href="{% url 'gestionar_incidencias' %}" class="btn btn-outline-primary">🛠️ Tickets</a>
+                            </div>
+                            
+                            <a href="{% url 'registrar_lectura_gas' %}" class="btn btn-outline-warning text-dark fw-bold">
+                                🔥 Registrar Gas
+                            </a>
+
+                            <div class="dropdown">
+                                <button class="btn btn-outline-dark w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    ⚙️ Generación Masiva
+                                </button>
+                                <ul class="dropdown-menu w-100">
+                                    <li>
+                                        <a class="dropdown-item text-primary fw-bold" href="{% url 'generar_cuotas_masivas' %}" 
+                                           onclick="return confirm('¿Generar cuotas de MANTENIMIENTO de este mes?')">
+                                           🏢 Generar Cuotas Mensuales
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" href="{% url 'aplicar_moras' %}"
+                                           onclick="return confirm('¿Aplicar recargos por mora a vencidos?')">
+                                           ⏳ Aplicar Moras / Recargos
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 border-danger border-top-0 border-end-0 border-bottom-0 border-3 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title text-danger fw-bold">📢 Control</h5>
+                        <hr>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalAviso">
+                                📢 Publicar Aviso
+                            </button>
+                            <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalBloqueo">
+                                ⛔ Bloquear Fecha (Área Social)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        {% endif %}
         {% if avisos %}
         <div class="row mb-4">
             <div class="col-12">
-                <h5 class="text-muted mb-2">📢 Tablón de Anuncios</h5>
+                <h5 class="text-muted mb-2">📌 Tablón de Anuncios</h5>
                 {% for aviso in avisos %}
                 <div class="alert alert-info shadow-sm d-flex justify-content-between align-items-start" role="alert">
                     <div>
@@ -144,20 +200,20 @@
         {% endif %}
 
         {% if solicitudes_pendientes %}
-        <div class="card mb-4 border-primary">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">🔔 Solicitudes de Reserva Pendientes</h5>
-                <span class="badge bg-white text-primary">{{ solicitudes_pendientes.count }}</span>
+        <div class="card mb-4 border-warning shadow-sm">
+            <div class="card-header bg-warning text-dark fw-bold d-flex justify-content-between align-items-center">
+                <span>🔔 Solicitudes de Reserva Pendientes</span>
+                <span class="badge bg-dark">{{ solicitudes_pendientes.count }}</span>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-striped mb-0">
+                    <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
                                 <th>Apto</th>
                                 <th>Vecino</th>
                                 <th>Área</th>
-                                <th>Fecha Solicitada</th>
+                                <th>Fecha</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -169,8 +225,8 @@
                                 <td>{{ sol.area_social.nombre }}</td>
                                 <td>{{ sol.fecha_solicitud }}</td>
                                 <td>
-                                    <a href="{% url 'gestionar_reserva' sol.id 'aprobar' %}" class="btn btn-sm btn-success" onclick="return confirm('¿Aprobar esta reserva?')">✅ Aprobar</a>
-                                    <a href="{% url 'gestionar_reserva' sol.id 'rechazar' %}" class="btn btn-sm btn-danger" onclick="return confirm('¿Rechazar esta reserva?')">❌ Rechazar</a>
+                                    <a href="{% url 'gestionar_reserva' sol.id 'aprobar' %}" class="btn btn-sm btn-success">✅</a>
+                                    <a href="{% url 'gestionar_reserva' sol.id 'rechazar' %}" class="btn btn-sm btn-danger">❌</a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -181,11 +237,11 @@
         </div>
         {% endif %}
 
-        <div class="card mb-4 shadow-sm">
+        <div class="card mb-4 shadow">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">📅 Calendario de Disponibilidad</h5>
+                <h5 class="mb-0 fw-bold">📅 Disponibilidad Área Social</h5>
                 <small class="text-muted d-none d-md-block">
-                    <span class="text-success fw-bold">■ Tus Reservas</span> | 
+                    <span class="text-success fw-bold">■ Tu Reserva</span> | 
                     <span class="text-danger fw-bold">■ Ocupado</span> | 
                     <span class="text-dark fw-bold">■ Mantenimiento</span>
                 </small>
@@ -198,20 +254,18 @@
         <div class="row">
             <div class="col-md-6">
                 {% if user.saldo_a_favor > 0 %}
-                <div class="alert alert-success d-flex align-items-center mb-3 shadow-sm border-success">
-                    <div style="font-size: 2rem; margin-right: 15px;">🤑</div>
+                <div class="alert alert-success d-flex align-items-center mb-3 shadow-sm">
+                    <div class="fs-1 me-3">🤑</div>
                     <div>
                         <h5 class="alert-heading mb-0">¡Tienes Saldo a Favor!</h5>
-                        <p class="mb-0">
-                            Crédito disponible: <strong>${{ user.saldo_a_favor }}</strong>.
-                            <small class="d-block text-muted" style="line-height: 1;">Se descontará de tu próxima factura.</small>
-                        </p>
+                        <p class="mb-0">Disponible: <strong>${{ user.saldo_a_favor }}</strong>. Se usará en tu próxima factura.</p>
                     </div>
                 </div>
                 {% endif %}
+                
                 <div class="card mb-3 shadow-sm">
                     <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                        <span class="fw-bold">💰 Estado de Cuenta</span>
+                        <span class="fw-bold">💰 Mi Estado de Cuenta</span>
                         {% if total_pendiente > 0 %}
                             <span class="badge bg-danger">Debe: ${{ total_pendiente }}</span>
                         {% else %}
@@ -220,13 +274,9 @@
                     </div>
                     <div class="card-body p-0">
                         {% if mi_apartamento %}
-                            <div class="p-3 bg-light border-bottom">
-                                <h2 class="mb-0 text-center">{{ mi_apartamento.numero }}</h2>
-                                <p class="text-center text-muted mb-0 small">Piso: {{ mi_apartamento.piso }}</p>
-                            </div>
-                        {% else %}
-                            <div class="p-3 alert alert-warning mb-0">
-                                ⚠️ No tienes apartamento asignado.
+                            <div class="p-3 bg-light border-bottom text-center">
+                                <h2 class="mb-0">{{ mi_apartamento.numero }}</h2>
+                                <small class="text-muted">Piso: {{ mi_apartamento.piso }}</small>
                             </div>
                         {% endif %}
 
@@ -236,37 +286,33 @@
                                     <div>
                                         <small class="text-muted d-block">{{ factura.fecha_emision|date:"d M Y" }}</small>
                                         <strong>{{ factura.concepto }}</strong>
-                                        <div class="small">
-                                            {% if factura.tipo == 'GAS' %}🔥 Gas{% else %}🏢 Cuota{% endif %}
+                                        <div class="small badge bg-light text-dark border">
+                                            {% if factura.tipo == 'GAS' %}🔥 Gas{% elif factura.tipo == 'OTRO' %}📝 Abono{% else %}🏢 Cuota{% endif %}
                                         </div>
                                     </div>
-                                    
                                     <div class="text-end">
                                         {% if factura.estado == 'PAGADO' %}
                                             <span class="d-block fw-bold text-dark">${{ factura.monto }}</span>
+                                            <span class="badge bg-success">Pagado</span>
+                                            <a href="{% url 'ver_recibo' factura.id %}" target="_blank" class="text-decoration-none ms-1">📄</a>
                                         {% else %}
-                                            {% if factura.saldo_pendiente and factura.saldo_pendiente < factura.monto %}
+                                            {% if factura.saldo_pendiente < factura.monto %}
                                                 <span class="d-block fw-bold text-danger">Restan: ${{ factura.saldo_pendiente }}</span>
-                                                <small class="d-block text-muted text-decoration-line-through" style="font-size: 0.8em;">Total: ${{ factura.monto }}</small>
+                                                <small class="text-muted text-decoration-line-through">${{ factura.monto }}</small>
                                             {% else %}
                                                 <span class="d-block fw-bold text-dark">${{ factura.monto }}</span>
                                             {% endif %}
-                                        {% endif %}
-                                        
-                                        {% if factura.estado == 'PENDIENTE' %}
-                                            <span class="badge bg-warning text-dark">Pendiente</span>
-                                        {% elif factura.estado == 'PAGADO' %}
-                                            <span class="badge bg-success">Pagado</span>
-                                            <a href="{% url 'ver_recibo' factura.id %}" target="_blank" class="text-decoration-none ms-1" title="Ver Recibo">
-                                                📄
-                                            </a>
-                                        {% else %}
-                                            <span class="badge bg-danger">Vencido</span>
+                                            
+                                            {% if factura.estado == 'PENDIENTE' %}
+                                                <span class="badge bg-warning text-dark">Pendiente</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Vencido</span>
+                                            {% endif %}
                                         {% endif %}
                                     </div>
                                 </div>
                             {% empty %}
-                                <div class="p-3 text-center text-muted">No tienes facturas registradas.</div>
+                                <div class="p-4 text-center text-muted">No tienes movimientos registrados.</div>
                             {% endfor %}
                         </div>
                     </div>
@@ -274,11 +320,9 @@
             </div>
 
             <div class="col-md-6">
-                <div class="card mb-3">
-                    <div class="card-header bg-warning">Reservas Área Social</div>
-                    
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-header bg-secondary text-white">🏖️ Mis Reservas (Área Social)</div>
                     <div class="card-body">
-                        <h5>Mis Solicitudes:</h5>
                         <ul class="list-group list-group-flush mb-3">
                         {% for reserva in mis_reservas %}
                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
@@ -300,14 +344,14 @@
                                 {% if reserva.estado != 'RECHAZADA' %}
                                     <a href="{% url 'cancelar_reserva' reserva.id %}" 
                                        class="btn btn-outline-danger btn-sm" 
-                                       onclick="return confirm('¿Estás seguro de que deseas CANCELAR esta reserva? Se liberará el espacio.')"
-                                       title="Cancelar Reserva">
+                                       onclick="return confirm('¿Cancelar reserva?')"
+                                       title="Cancelar">
                                        🗑️
                                     </a>
                                 {% endif %}
                             </li>
                         {% empty %}
-                            <li class="list-group-item">No tienes reservas recientes.</li>
+                            <li class="list-group-item text-muted text-center">No tienes reservas activas.</li>
                         {% endfor %}
                         </ul>
                         <a href="{% url 'crear_reserva' %}" class="btn btn-primary w-100">Nueva Reserva</a>
@@ -317,7 +361,7 @@
         </div>
 
     {% else %}
-        <div class="alert alert-danger">Error: No tienes residencial asignado.</div>
+        <div class="alert alert-danger">Error: No tienes residencial asignado. Contacta soporte.</div>
     {% endif %}
 
 </div>
@@ -333,16 +377,12 @@
       <div class="modal-body">
         <p>La reserva se actualizó. Envía este mensaje al residente:</p>
         <div class="mb-3">
-            <label class="form-label fw-bold">Mensaje generado:</label>
-            <textarea class="form-control" id="textoWhatsapp" rows="10">{{ whatsapp_data.mensaje }}</textarea>
+            <textarea class="form-control" id="textoWhatsapp" rows="5">{{ whatsapp_data.mensaje }}</textarea>
         </div>
         <div class="d-grid gap-2">
             <a href="https://wa.me/{{ whatsapp_data.telefono }}?text={{ whatsapp_data.mensaje|urlencode }}" target="_blank" class="btn btn-success fw-bold">
                 🚀 Abrir WhatsApp Web
             </a>
-            <button onclick="copiarTexto()" class="btn btn-outline-secondary">
-                📋 Solo Copiar Texto
-            </button>
         </div>
       </div>
     </div>
@@ -354,19 +394,19 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header bg-danger text-white">
-        <h5 class="modal-title">🚨 Reportar Avería / Incidencia</h5>
+        <h5 class="modal-title">🚨 Reportar Avería</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form action="{% url 'crear_incidencia' %}" method="post" enctype="multipart/form-data">
           {% csrf_token %}
           <div class="modal-body">
             <div class="mb-3">
-                <label class="form-label fw-bold">Título del Problema</label>
-                <input type="text" name="titulo" class="form-control" placeholder="Ej: Filtración en pasillo piso 3" required>
+                <label class="form-label fw-bold">Título</label>
+                <input type="text" name="titulo" class="form-control" required>
             </div>
             <div class="mb-3">
-                <label class="form-label fw-bold">Descripción Detallada</label>
-                <textarea name="descripcion" class="form-control" rows="4" placeholder="Explica qué sucede y dónde..." required></textarea>
+                <label class="form-label fw-bold">Detalle</label>
+                <textarea name="descripcion" class="form-control" rows="3" required></textarea>
             </div>
             <div class="mb-3">
                 <label class="form-label fw-bold">Foto (Opcional)</label>
@@ -375,7 +415,7 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-danger">Enviar Reporte</button>
+            <button type="submit" class="btn btn-danger">Enviar</button>
           </div>
       </form>
     </div>
@@ -386,25 +426,23 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header bg-danger text-white">
-        <h5 class="modal-title">⛔ Bloquear un día</h5>
+        <h5 class="modal-title">⛔ Bloquear Fecha</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form action="{% url 'bloquear_fecha' %}" method="post">
           {% csrf_token %}
           <div class="modal-body">
-            <p>Al bloquear una fecha, nadie podrá reservar ese día.</p>
             <div class="mb-3">
-                <label class="form-label">Fecha a bloquear</label>
+                <label class="form-label">Fecha</label>
                 <input type="date" name="fecha_bloqueo" class="form-control" required>
             </div>
             <div class="mb-3">
                 <label class="form-label">Motivo</label>
-                <input type="text" name="motivo_bloqueo" class="form-control" placeholder="Ej: Mantenimiento Piscina" required>
+                <input type="text" name="motivo_bloqueo" class="form-control" required>
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-danger">Confirmar Bloqueo</button>
+            <button type="submit" class="btn btn-danger">Bloquear</button>
           </div>
       </form>
     </div>
@@ -415,7 +453,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header bg-dark text-white">
-        <h5 class="modal-title">📢 Nuevo Anuncio</h5>
+        <h5 class="modal-title">📢 Nuevo Aviso</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form action="{% url 'crear_aviso' %}" method="post">
@@ -423,16 +461,15 @@
           <div class="modal-body">
             <div class="mb-3">
                 <label class="form-label fw-bold">Título</label>
-                <input type="text" name="titulo" class="form-control" placeholder="Ej: Mantenimiento Piscina" required>
+                <input type="text" name="titulo" class="form-control" required>
             </div>
             <div class="mb-3">
                 <label class="form-label fw-bold">Mensaje</label>
-                <textarea name="mensaje" class="form-control" rows="4" placeholder="Escribe aquí el mensaje para los vecinos..." required></textarea>
+                <textarea name="mensaje" class="form-control" rows="3" required></textarea>
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-dark">Publicar Ahora</button>
+            <button type="submit" class="btn btn-dark">Publicar</button>
           </div>
       </form>
     </div>
@@ -443,46 +480,30 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        
-        // --- CALENDARIO ---
         var calendarEl = document.getElementById('calendar');
         if (calendarEl) {
             var calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
                 locale: 'es', 
-                height: 550,  
+                height: 500,  
                 headerToolbar: {
                     left: 'prev,next today',
                     center: 'title',
                     right: 'dayGridMonth,listMonth'
                 },
-                buttonText: {
-                    today: 'Hoy',
-                    month: 'Mes',
-                    list:  'Agenda'
-                },
+                buttonText: { today: 'Hoy', month: 'Mes', list: 'Lista' },
                 events: "{% url 'api_eventos' %}", 
-                eventClick: function(info) {
-                    alert('Detalle: ' + info.event.title);
-                }
+                eventClick: function(info) { alert(info.event.title); }
             });
             calendar.render();
         }
 
-        // --- MODAL WHATSAPP ---
         var myModalElement = document.getElementById('modalWhatsapp');
         if (myModalElement) {
             var myModal = new bootstrap.Modal(myModalElement);
             myModal.show();
         }
     });
-
-    function copiarTexto() {
-        var copyText = document.getElementById("textoWhatsapp");
-        copyText.select();
-        document.execCommand("copy");
-        alert("¡Texto copiado!");
-    }
 </script>
 
 </body>
