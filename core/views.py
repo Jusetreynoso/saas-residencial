@@ -26,7 +26,9 @@ from .forms import (
 )
 
 from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia, ReportePago
-from django.db.models import Sum, Max
+from django.db.models import Sum, Max, Count
+from django.db.models.functions import TruncMonth
+
 
 # ---------------------------------------------
 # VISTA 1: El Dashboard
@@ -508,40 +510,89 @@ def registrar_gasto(request):
         'total_mes': total_mes
     })
 
+# En core/views.py
+
 @login_required
 def reporte_financiero(request):
     if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
         return redirect('dashboard')
 
-    hoy = timezone.now()
-    mes_actual = hoy.month
-    anio_actual = hoy.year
+    residencial = request.user.residencial
+    anio_actual = timezone.now().year
 
-    ingresos_query = Factura.objects.filter(
-        residencial=request.user.residencial,
+    # 1. TOTALES DEL AÑO (Tarjetas de arriba)
+    total_ingresos = Factura.objects.filter(
+        residencial=residencial,
         estado='PAGADO',
-        fecha_pago__month=mes_actual,
         fecha_pago__year=anio_actual
-    )
-    total_ingresos = ingresos_query.aggregate(Sum('monto'))['monto__sum'] or 0
+    ).aggregate(Sum('monto'))['monto__sum'] or 0
 
-    gastos_query = Gasto.objects.filter(
-        residencial=request.user.residencial,
-        fecha_gasto__month=mes_actual,
+    total_gastos = Gasto.objects.filter(
+        residencial=residencial,
         fecha_gasto__year=anio_actual
-    )
-    total_gastos = gastos_query.aggregate(Sum('monto'))['monto__sum'] or 0
+    ).aggregate(Sum('monto'))['monto__sum'] or 0
 
     balance = total_ingresos - total_gastos
 
-    return render(request, 'core/reporte_financiero.html', {
-        'fecha': hoy,
+    # 2. DATOS PARA GRÁFICA DE BARRAS (MES A MES)
+    # Ingresos por mes
+    ingresos_qs = Factura.objects.filter(
+        residencial=residencial,
+        estado='PAGADO',
+        fecha_pago__year=anio_actual
+    ).annotate(mes=TruncMonth('fecha_pago')).values('mes').annotate(total=Sum('monto')).order_by('mes')
+
+    # Gastos por mes
+    gastos_qs = Gasto.objects.filter(
+        residencial=residencial,
+        fecha_gasto__year=anio_actual
+    ).annotate(mes=TruncMonth('fecha_gasto')).values('mes').annotate(total=Sum('monto')).order_by('mes')
+
+    # Procesamos los datos para que sean listas simples
+    # Usamos un diccionario para asegurarnos de que los meses coincidan
+    datos_por_mes = {}
+    
+    # Llenar ingresos
+    for i in ingresos_qs:
+        mes_str = i['mes'].strftime('%B') # Nombre del mes
+        if mes_str not in datos_por_mes: datos_por_mes[mes_str] = {'ingreso': 0, 'gasto': 0}
+        datos_por_mes[mes_str]['ingreso'] = float(i['total'])
+
+    # Llenar gastos
+    for g in gastos_qs:
+        mes_str = g['mes'].strftime('%B')
+        if mes_str not in datos_por_mes: datos_por_mes[mes_str] = {'ingreso': 0, 'gasto': 0}
+        datos_por_mes[mes_str]['gasto'] = float(g['total'])
+
+    # Separar en listas para la gráfica
+    labels = list(datos_por_mes.keys())
+    data_ingresos = [d['ingreso'] for d in datos_por_mes.values()]
+    data_gastos = [d['gasto'] for d in datos_por_mes.values()]
+
+    # 3. DATOS PARA GRÁFICA DE TORTA (POR TIPO)
+    ingresos_tipo = Factura.objects.filter(
+        residencial=residencial,
+        estado='PAGADO',
+        fecha_pago__year=anio_actual
+    ).values('tipo').annotate(total=Sum('monto'))
+
+    pie_labels = [item['tipo'] for item in ingresos_tipo]
+    pie_data = [float(item['total']) for item in ingresos_tipo]
+
+    context = {
+        'anio': anio_actual,
         'total_ingresos': total_ingresos,
         'total_gastos': total_gastos,
         'balance': balance,
-        'lista_ingresos': ingresos_query.order_by('-fecha_pago'),
-        'lista_gastos': gastos_query.order_by('-fecha_gasto')
-    })
+        # Convertimos a JSON para que JavaScript lo entienda
+        'bar_labels': json.dumps(labels),
+        'bar_ingresos': json.dumps(data_ingresos),
+        'bar_gastos': json.dumps(data_gastos),
+        'pie_labels': json.dumps(pie_labels),
+        'pie_data': json.dumps(pie_data),
+    }
+
+    return render(request, 'core/reporte_financiero.html', context)
 
 @login_required
 def crear_aviso(request):

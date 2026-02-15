@@ -2,122 +2,146 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reporte Financiero</title>
+    <title>Reporte Financiero Avanzado</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .card-icon { font-size: 2rem; }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-light">
 
-<div class="container mt-5 mb-5">
+<nav class="navbar navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'dashboard' %}">🏢 Volver al Dashboard</a>
+    </div>
+</nav>
+
+<div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="mb-0">📊 Reporte Mensual</h2>
-            <p class="text-muted text-uppercase fw-bold">{{ fecha|date:"F Y" }}</p>
-        </div>
-        <div>
-            <button onclick="window.print()" class="btn btn-outline-dark">🖨️ Imprimir Reporte</button>
-            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Volver</a>
-        </div>
+        <h2 class="fw-bold text-dark">📊 Reporte Financiero {{ anio }}</h2>
+        <button onclick="window.print()" class="btn btn-outline-dark">🖨️ Imprimir PDF</button>
     </div>
 
-    <div class="row mb-4">
+    <div class="row mb-5">
         <div class="col-md-4">
-            <div class="card border-success shadow-sm">
-                <div class="card-body text-success text-center">
-                    <div class="card-icon">💰</div>
-                    <h5 class="card-title">Ingresos Cobrados</h5>
-                    <h2 class="fw-bold">+${{ total_ingresos }}</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card border-danger shadow-sm">
-                <div class="card-body text-danger text-center">
-                    <div class="card-icon">📉</div>
-                    <h5 class="card-title">Total Gastos</h5>
-                    <h2 class="fw-bold">-${{ total_gastos }}</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card {% if balance >= 0 %}border-primary bg-primary text-white{% else %}border-danger bg-danger text-white{% endif %} shadow">
+            <div class="card text-white bg-success shadow h-100">
                 <div class="card-body text-center">
-                    <div class="card-icon">⚖️</div>
-                    <h5 class="card-title">Balance del Mes</h5>
-                    <h2 class="fw-bold">${{ balance }}</h2>
+                    <h6 class="text-uppercase opacity-75">Ingresos Totales ({{ anio }})</h6>
+                    <h2 class="display-6 fw-bold">${{ total_ingresos|floatform:2 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-danger shadow h-100">
+                <div class="card-body text-center">
+                    <h6 class="text-uppercase opacity-75">Gastos Totales ({{ anio }})</h6>
+                    <h2 class="display-6 fw-bold">${{ total_gastos|floatform:2 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-primary shadow h-100">
+                <div class="card-body text-center">
+                    <h6 class="text-uppercase opacity-75">Balance Neto</h6>
+                    <h2 class="display-6 fw-bold">${{ balance|floatform:2 }}</h2>
+                    <small>{% if balance >= 0 %}📈 Superávit{% else %}📉 Déficit{% endif %}</small>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">Detalle de Entradas</h5>
+        
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-white fw-bold">
+                    📈 Evolución Mensual: Ingresos vs Gastos
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Apto</th>
-                                <th>Concepto</th>
-                                <th class="text-end">Monto</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for ingreso in lista_ingresos %}
-                            <tr>
-                                <td>{{ ingreso.fecha_pago|date:"d/m" }}</td>
-                                <td>{{ ingreso.usuario.apartamento.numero }}</td>
-                                <td><small>{{ ingreso.get_tipo_display }}</small></td>
-                                <td class="text-end fw-bold text-success">+{{ ingreso.monto }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="4" class="text-center p-3 text-muted">Aún no hay cobros este mes.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="card-body">
+                    <canvas id="barChart" height="150"></canvas>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0">Detalle de Salidas</h5>
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-white fw-bold">
+                    🍕 Fuente de Ingresos
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Descripción</th>
-                                <th>Cat.</th>
-                                <th class="text-end">Monto</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for gasto in lista_gastos %}
-                            <tr>
-                                <td>{{ gasto.fecha_gasto|date:"d/m" }}</td>
-                                <td>{{ gasto.descripcion }}</td>
-                                <td><small class="text-muted">{{ gasto.get_categoria_display }}</small></td>
-                                <td class="text-end fw-bold text-danger">-{{ gasto.monto }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="4" class="text-center p-3 text-muted">No hay gastos registrados.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="card-body">
+                    <canvas id="pieChart" height="200"></canvas>
                 </div>
             </div>
         </div>
     </div>
+
+    <div class="alert alert-info mt-4">
+        <i class="bi bi-info-circle"></i> <strong>Nota:</strong> Los datos mostrados corresponden únicamente a las transacciones registradas y pagadas en el año fiscal <strong>{{ anio }}</strong>.
+    </div>
+
 </div>
+
+<script>
+    // --- 1. GRÁFICO DE BARRAS (Ingresos vs Gastos) ---
+    const ctxBar = document.getElementById('barChart').getContext('2d');
+    const barChart = new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+            labels: {{ bar_labels|safe }}, // Etiquetas (Meses)
+            datasets: [
+                {
+                    label: 'Ingresos ($)',
+                    data: {{ bar_ingresos|safe }},
+                    backgroundColor: 'rgba(25, 135, 84, 0.7)', // Verde
+                    borderColor: 'rgba(25, 135, 84, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Gastos ($)',
+                    data: {{ bar_gastos|safe }},
+                    backgroundColor: 'rgba(220, 53, 69, 0.7)', // Rojo
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // --- 2. GRÁFICO DE TORTA (Tipos de Ingreso) ---
+    const ctxPie = document.getElementById('pieChart').getContext('2d');
+    const pieChart = new Chart(ctxPie, {
+        type: 'doughnut', // Tipo "Dona" (más moderno que Pie)
+        data: {
+            labels: {{ pie_labels|safe }},
+            datasets: [{
+                data: {{ pie_data|safe }},
+                backgroundColor: [
+                    '#0d6efd', // Azul (Cuotas)
+                    '#ffc107', // Amarillo (Gas)
+                    '#198754', // Verde (Otros)
+                    '#6c757d'  // Gris
+                ],
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>
