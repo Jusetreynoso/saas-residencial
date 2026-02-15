@@ -72,6 +72,10 @@
                     🚨 Reportar Avería
                  </button>
 
+                 <a href="{% url 'reportar_pago' %}" class="btn btn-success fw-bold">
+                    📸 Reportar Pago
+                 </a>
+
                  {% if user.rol == 'ADMIN_RESIDENCIAL' or user.is_superuser %}
                     <div class="btn-group">
                         <a href="{% url 'lista_vecinos' %}" class="btn btn-outline-dark fw-bold">👥 Vecinos</a>
@@ -89,11 +93,20 @@
                         <a href="{% url 'cuentas_por_cobrar' %}" class="btn btn-success fw-bold">💸 Cobros</a>
 
                         <a href="{% url 'registrar_abono' %}" class="btn btn-outline-success fw-bold">
-                            ➕ Abono / Adelanto
+                            ➕ Abono
                         </a>
+
+                        <a href="{% url 'gestionar_reportes_pago' %}" class="btn btn-warning fw-bold border-dark">
+                            📸 Validar Pagos
+                        </a>
+
                         <a href="{% url 'registrar_gasto' %}" class="btn btn-secondary fw-bold">📉 Gastos</a>
                         
                         <a href="{% url 'reporte_financiero' %}" class="btn btn-info fw-bold text-white">📊 Reporte</a>
+
+                        <a href="{% url 'balance_residencial' %}" class="btn btn-dark fw-bold border-white">
+                            🏦 Balance Global
+                        </a>
 
                         <a href="{% url 'aplicar_moras' %}" 
                            class="btn btn-outline-danger fw-bold"
@@ -251,7 +264,7 @@
                                             <span class="badge bg-danger">Vencido</span>
                                         {% endif %}
                                     </div>
-                                    </div>
+                                </div>
                             {% empty %}
                                 <div class="p-3 text-center text-muted">No tienes facturas registradas.</div>
                             {% endfor %}

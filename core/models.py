@@ -273,3 +273,22 @@ class Incidencia(models.Model):
 
     def __str__(self):
         return f"{self.titulo} - {self.usuario.username}"
+    
+class ReportePago(models.Model):
+    ESTADOS = [
+        ('PENDIENTE', 'Pendiente de Revisión'),
+        ('APROBADO', 'Aprobado'),
+        ('RECHAZADO', 'Rechazado'),
+    ]
+
+    residencial = models.ForeignKey(Residencial, on_delete=models.CASCADE)
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    fecha_reporte = models.DateTimeField(auto_now_add=True)
+    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    comprobante = models.ImageField(upload_to='comprobantes/', blank=True, null=True)
+    nota_usuario = models.TextField(blank=True, null=True, help_text="Ej: Pago de Marzo y Abril")
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='PENDIENTE')
+    comentario_admin = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Pago ${self.monto} - {self.usuario.username}"

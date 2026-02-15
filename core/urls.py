@@ -56,4 +56,10 @@ urlpatterns = [
     path('aplicar-moras/', views.aplicar_moras, name='aplicar_moras'),
 
     path('registrar-abono/', views.registrar_abono, name='registrar_abono'),
+
+    path('reportar-pago/', views.reportar_pago, name='reportar_pago'),
+
+    path('gestionar-pagos/', views.gestionar_reportes_pago, name='gestionar_reportes_pago'),
+
+    path('balance-general/', views.balance_residencial, name='balance_residencial'),
 ]

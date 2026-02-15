@@ -1,0 +1,45 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>📸 Gestión de Comprobantes</h2>
+    
+    {% for reporte in reportes %}
+    <div class="card mb-3 shadow-sm border-{% if reporte.estado == 'PENDIENTE' %}warning{% elif reporte.estado == 'APROBADO' %}success{% else %}danger{% endif %}">
+        <div class="card-header d-flex justify-content-between">
+            <strong>{{ reporte.usuario.apartamento.numero }} - {{ reporte.usuario.first_name }}</strong>
+            <span>{{ reporte.fecha_reporte|date:"d M Y H:i" }}</span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    {% if reporte.comprobante %}
+                        <a href="{{ reporte.comprobante.url }}" target="_blank">
+                            <img src="{{ reporte.comprobante.url }}" class="img-fluid rounded" style="max-height: 150px;">
+                        </a>
+                        <br><small class="text-muted">Clic para ampliar</small>
+                    {% else %}
+                        <span class="text-muted">Sin imagen</span>
+                    {% endif %}
+                </div>
+                <div class="col-md-8">
+                    <h4>Monto Reportado: ${{ reporte.monto }}</h4>
+                    <p><strong>Nota:</strong> {{ reporte.nota_usuario }}</p>
+                    <p><strong>Estado:</strong> {{ reporte.get_estado_display }}</p>
+
+                    {% if reporte.estado == 'PENDIENTE' %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="reporte_id" value="{{ reporte.id }}">
+                        <button type="submit" name="accion" value="aprobar" class="btn btn-success">✅ Aprobar y Sumar Saldo</button>
+                        <button type="submit" name="accion" value="rechazar" class="btn btn-danger">❌ Rechazar</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info">No hay reportes de pago recientes.</div>
+    {% endfor %}
+</div>
+{% endblock %}

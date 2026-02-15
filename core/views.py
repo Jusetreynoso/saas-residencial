@@ -21,10 +21,11 @@ from .forms import (
     RegistroVecinoForm, 
     IncidenciaForm,
     EditarVecinoForm,
-    AbonoForm
+    AbonoForm,
+    ReportePagoForm
 )
 
-from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia
+from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia, ReportePago
 from django.db.models import Sum, Max
 
 # ---------------------------------------------
@@ -856,3 +857,117 @@ def registrar_abono(request):
         form = AbonoForm(request.user)
 
     return render(request, 'core/registrar_abono.html', {'form': form})
+
+
+# 1. VISTA PARA EL VECINO (SUBIR PAGO)
+@login_required
+def reportar_pago(request):
+    if request.method == 'POST':
+        form = ReportePagoForm(request.POST, request.FILES)
+        if form.is_valid():
+            reporte = form.save(commit=False)
+            reporte.usuario = request.user
+            reporte.residencial = request.user.residencial
+            reporte.save()
+            messages.success(request, "📸 Comprobante enviado. Espera la confirmación del administrador.")
+            return redirect('dashboard')
+    else:
+        form = ReportePagoForm()
+    
+    return render(request, 'core/reportar_pago.html', {'form': form})
+
+# 2. VISTA PARA EL ADMIN (GESTIONAR REPORTES)
+@login_required
+def gestionar_reportes_pago(request):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+
+    # Si enviaron el formulario de Aprobar/Rechazar
+    if request.method == 'POST':
+        reporte_id = request.POST.get('reporte_id')
+        accion = request.POST.get('accion') # 'aprobar' o 'rechazar'
+        
+        reporte = get_object_or_404(ReportePago, pk=reporte_id, residencial=request.user.residencial)
+        
+        if reporte.estado == 'PENDIENTE':
+            if accion == 'aprobar':
+                # --- MAGIA FINANCIERA ---
+                # 1. Sumamos al saldo a favor del vecino
+                vecino = reporte.usuario
+                saldo_actual = vecino.saldo_a_favor or Decimal(0)
+                vecino.saldo_a_favor = saldo_actual + reporte.monto
+                vecino.save()
+                
+                # 2. Creamos registro de ingreso en Facturas
+                Factura.objects.create(
+                    residencial=request.user.residencial,
+                    usuario=vecino,
+                    tipo='OTRO',
+                    concepto=f"✅ PAGO APROBADO: {reporte.nota_usuario or 'Reporte Web'}",
+                    monto=reporte.monto,
+                    monto_pagado=reporte.monto,
+                    estado='PAGADO',
+                    fecha_emision=timezone.now().date(),
+                    fecha_vencimiento=timezone.now().date(),
+                    fecha_pago=timezone.now().date(),
+                    saldo_pendiente=0
+                )
+                
+                reporte.estado = 'APROBADO'
+                messages.success(request, f"Pago de {vecino.first_name} aprobado y sumado a su saldo.")
+                
+            elif accion == 'rechazar':
+                reporte.estado = 'RECHAZADA'
+                messages.warning(request, "Reporte de pago rechazado.")
+            
+            reporte.save()
+            return redirect('gestionar_reportes_pago')
+
+    # LISTADO: Pendientes arriba
+    reportes = ReportePago.objects.filter(residencial=request.user.residencial).order_by('estado', '-fecha_reporte')
+    return render(request, 'core/gestionar_reportes.html', {'reportes': reportes})
+
+# 3. VISTA "MATRIZ FINANCIERA" (LO QUE PEDISTE)
+@login_required
+def balance_residencial(request):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+
+    apartamentos = Apartamento.objects.filter(residencial=request.user.residencial).order_by('numero')
+    
+    data_financiera = []
+    
+    total_deuda_global = 0
+    total_saldo_favor_global = 0
+
+    for apt in apartamentos:
+        dueno = apt.habitantes.first()
+        
+        deuda = 0
+        saldo_favor = 0
+        nombre_dueno = "--- Sin Asignar ---"
+        
+        if dueno:
+            nombre_dueno = f"{dueno.first_name} {dueno.last_name}"
+            saldo_favor = dueno.saldo_a_favor or 0
+            
+            # Calculamos deuda real
+            facturas_pendientes = Factura.objects.filter(usuario=dueno, estado='PENDIENTE')
+            deuda = sum((f.saldo_pendiente or f.monto) for f in facturas_pendientes)
+
+        data_financiera.append({
+            'apto': apt.numero,
+            'dueno': nombre_dueno,
+            'deuda': deuda,
+            'saldo_favor': saldo_favor,
+            'estado': 'Moroso' if deuda > 0 else 'Al día'
+        })
+        
+        total_deuda_global += deuda
+        total_saldo_favor_global += saldo_favor
+
+    return render(request, 'core/balance_residencial.html', {
+        'data': data_financiera,
+        'total_deuda': total_deuda_global,
+        'total_saldo': total_saldo_favor_global
+    })
