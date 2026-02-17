@@ -942,36 +942,61 @@ def gestionar_reportes_pago(request):
         
         if reporte.estado == 'PENDIENTE':
             if accion == 'aprobar':
-                # --- MAGIA FINANCIERA ---
-                # 1. Sumamos al saldo a favor del vecino
                 vecino = reporte.usuario
-                saldo_actual = vecino.saldo_a_favor or Decimal(0)
-                vecino.saldo_a_favor = saldo_actual + reporte.monto
-                vecino.save()
+                monto_disponible = reporte.monto
                 
-                # 2. Creamos registro de ingreso en Facturas
-                Factura.objects.create(
-                    residencial=request.user.residencial,
-                    usuario=vecino,
-                    tipo='OTRO',
-                    concepto=f"✅ PAGO APROBADO: {reporte.nota_usuario or 'Reporte Web'}",
-                    monto=reporte.monto,
-                    monto_pagado=reporte.monto,
-                    estado='PAGADO',
-                    fecha_emision=timezone.now().date(),
-                    fecha_vencimiento=timezone.now().date(),
-                    fecha_pago=timezone.now().date(),
-                    saldo_pendiente=0
-                )
+                # --- ALGORITMO MATA-DEUDAS (FIFO) ---
+                # 1. Buscamos facturas pendientes ordenadas por fecha (la más vieja primero)
+                facturas_pendientes = Factura.objects.filter(
+                    usuario=vecino, 
+                    estado='PENDIENTE'
+                ).order_by('fecha_vencimiento')
+
+                facturas_pagadas = 0
+
+                for factura in facturas_pendientes:
+                    if monto_disponible <= 0:
+                        break # Se acabó el dinero
+
+                    deuda_factura = factura.saldo_pendiente
+
+                    if monto_disponible >= deuda_factura:
+                        # LE ALCANZA para pagar esta factura completa
+                        monto_disponible -= deuda_factura
+                        factura.saldo_pendiente = 0
+                        factura.estado = 'PAGADO'
+                        factura.monto_pagado = factura.monto # Asumimos pago total
+                        factura.fecha_pago = timezone.now().date()
+                        factura.save()
+                        facturas_pagadas += 1
+                    else:
+                        # NO LE ALCANZA (Abono parcial a esta factura)
+                        factura.saldo_pendiente -= monto_disponible
+                        # El estado sigue siendo PENDIENTE pero debe menos
+                        monto_disponible = 0 
+                        factura.save()
                 
+                # 2. Si sobró dinero después de pagar todo, va al Saldo a Favor
+                if monto_disponible > 0:
+                    saldo_actual = vecino.saldo_a_favor or 0
+                    vecino.saldo_a_favor = saldo_actual + monto_disponible
+                    vecino.save()
+                    msg_extra = f"y sobraron ${monto_disponible} para saldo a favor."
+                else:
+                    msg_extra = "cubriendo deuda pendiente."
+
+                # Actualizamos el reporte
                 reporte.estado = 'APROBADO'
-                messages.success(request, f"Pago de {vecino.first_name} aprobado y sumado a su saldo.")
+                reporte.comentario_admin = f"Pago aplicado automáticamente. Se pagaron {facturas_pagadas} facturas."
+                reporte.save()
+
+                messages.success(request, f"Pago de {vecino.first_name} aplicado exitosamente {msg_extra}")
                 
             elif accion == 'rechazar':
-                reporte.estado = 'RECHAZADA'
+                reporte.estado = 'RECHAZADO'
+                reporte.save()
                 messages.warning(request, "Reporte de pago rechazado.")
             
-            reporte.save()
             return redirect('gestionar_reportes_pago')
 
     # LISTADO: Pendientes arriba
