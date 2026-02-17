@@ -9,19 +9,17 @@
 
 <nav class="navbar navbar-dark bg-primary mb-4">
     <div class="container">
-        <a class="navbar-brand" href="{% url 'dashboard' %}">🏢 Volver al Dashboard</a>
-        <span class="navbar-text text-white">
-            Hola, {{ user.username }} | 
-            <form action="{% url 'logout' %}" method="post" style="display:inline;">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-link text-white fw-bold p-0 text-decoration-none">Salir</button>
-            </form>
-        </span>
+        <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">
+            ⬅️ Volver al Dashboard
+        </a>
+        <form action="{% url 'logout' %}" method="post" class="d-flex">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-light btn-sm fw-bold">Salir</button>
+        </form>
     </div>
 </nav>
 
 <div class="container mt-5">
-
     {% if messages %}
         {% for message in messages %}
             <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
@@ -34,13 +32,13 @@
     <div class="row justify-content-center">
         <div class="col-md-6">
             <div class="card shadow">
-                <div class="card-header bg-success text-white">
-                    <h4 class="mb-0">📸 Reportar Transferencia / Pago</h4>
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">📸 Reportar Pago</h4>
+                    <a href="{% url 'dashboard' %}" class="btn btn-sm btn-light text-success fw-bold">✕</a>
                 </div>
                 <div class="card-body">
                     <p class="text-muted small">
-                        Sube aquí la foto o captura de tu comprobante bancario. 
-                        El administrador lo validará y el monto se sumará a tu saldo a favor.
+                        Sube aquí la foto de tu comprobante. El administrador lo validará y se sumará a tu saldo.
                     </p>
                     
                     <form method="post" enctype="multipart/form-data">
@@ -57,25 +55,17 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold">Foto del Comprobante</label>
                             {{ form.comprobante }}
-                            <div class="form-text">Formatos permitidos: JPG, PNG, PDF. Procura que sea legible.</div>
-                            {% if form.comprobante.errors %}
-                                <div class="text-danger small">{{ form.comprobante.errors }}</div>
-                            {% endif %}
+                            <div class="form-text">Formatos: JPG, PNG, PDF.</div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Nota Adicional (Opcional)</label>
+                            <label class="form-label fw-bold">Nota (Opcional)</label>
                             {{ form.nota_usuario }}
-                            <div class="form-text">Ej: "Pago correspondiente a Marzo y Abril".</div>
                         </div>
 
                         <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-success fw-bold btn-lg">
-                                🚀 Enviar Reporte
-                            </button>
-                            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
-                                Cancelar
-                            </a>
+                            <button type="submit" class="btn btn-success fw-bold btn-lg">🚀 Enviar Reporte</button>
+                            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Cancelar y Volver</a>
                         </div>
                     </form>
                 </div>
@@ -85,6 +75,5 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
 </body>
 </html>

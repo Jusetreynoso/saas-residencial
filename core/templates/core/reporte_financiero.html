@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reporte Financiero Avanzado</title>
+    <title>Reporte Financiero - SaaS Residencial</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -10,14 +10,24 @@
 
 <nav class="navbar navbar-dark bg-primary mb-4">
     <div class="container">
-        <a class="navbar-brand" href="{% url 'dashboard' %}">🏢 Volver al Dashboard</a>
+        <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">
+            ⬅️ Volver al Dashboard
+        </a>
+        <form action="{% url 'logout' %}" method="post" class="d-flex">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-light btn-sm fw-bold">Salir</button>
+        </form>
     </div>
 </nav>
 
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-dark">📊 Reporte Financiero {{ anio }}</h2>
-        <button onclick="window.print()" class="btn btn-outline-dark">🖨️ Imprimir PDF</button>
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h2 class="fw-bold text-dark mb-0">📊 Reporte Financiero {{ anio }}</h2>
+        
+        <div class="btn-group">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">↩️ Volver</a>
+            <button onclick="window.print()" class="btn btn-dark">🖨️ Imprimir PDF</button>
+        </div>
     </div>
 
     <div class="row mb-5">
@@ -49,12 +59,9 @@
     </div>
 
     <div class="row">
-        
         <div class="col-lg-8 mb-4">
             <div class="card shadow">
-                <div class="card-header bg-white fw-bold">
-                    📈 Evolución Mensual: Ingresos vs Gastos
-                </div>
+                <div class="card-header bg-white fw-bold">📈 Ingresos vs Gastos (Mensual)</div>
                 <div class="card-body">
                     <canvas id="barChart" height="150"></canvas>
                 </div>
@@ -63,85 +70,64 @@
 
         <div class="col-lg-4 mb-4">
             <div class="card shadow">
-                <div class="card-header bg-white fw-bold">
-                    🍕 Fuente de Ingresos
-                </div>
+                <div class="card-header bg-white fw-bold">🍕 Fuentes de Ingreso</div>
                 <div class="card-body">
                     <canvas id="pieChart" height="200"></canvas>
                 </div>
             </div>
         </div>
     </div>
-
+    
     <div class="alert alert-info mt-4">
-        <i class="bi bi-info-circle"></i> <strong>Nota:</strong> Los datos mostrados corresponden únicamente a las transacciones registradas y pagadas en el año fiscal <strong>{{ anio }}</strong>.
+        <i class="bi bi-info-circle"></i> <strong>Nota:</strong> Los datos corresponden únicamente al año fiscal <strong>{{ anio }}</strong>.
     </div>
-
 </div>
 
 <script>
-    // --- 1. GRÁFICO DE BARRAS (Ingresos vs Gastos) ---
+    // Gráfico de Barras
     const ctxBar = document.getElementById('barChart').getContext('2d');
-    const barChart = new Chart(ctxBar, {
+    new Chart(ctxBar, {
         type: 'bar',
         data: {
-            labels: {{ bar_labels|safe }}, // Etiquetas (Meses)
+            labels: {{ bar_labels|safe }},
             datasets: [
                 {
                     label: 'Ingresos ($)',
                     data: {{ bar_ingresos|safe }},
-                    backgroundColor: 'rgba(25, 135, 84, 0.7)', // Verde
+                    backgroundColor: 'rgba(25, 135, 84, 0.7)',
                     borderColor: 'rgba(25, 135, 84, 1)',
                     borderWidth: 1
                 },
                 {
                     label: 'Gastos ($)',
                     data: {{ bar_gastos|safe }},
-                    backgroundColor: 'rgba(220, 53, 69, 0.7)', // Rojo
+                    backgroundColor: 'rgba(220, 53, 69, 0.7)',
                     borderColor: 'rgba(220, 53, 69, 1)',
                     borderWidth: 1
                 }
             ]
         },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
+        options: { responsive: true }
     });
 
-    // --- 2. GRÁFICO DE TORTA (Tipos de Ingreso) ---
+    // Gráfico de Pastel
     const ctxPie = document.getElementById('pieChart').getContext('2d');
-    const pieChart = new Chart(ctxPie, {
-        type: 'doughnut', // Tipo "Dona" (más moderno que Pie)
+    new Chart(ctxPie, {
+        type: 'doughnut',
         data: {
             labels: {{ pie_labels|safe }},
             datasets: [{
                 data: {{ pie_data|safe }},
-                backgroundColor: [
-                    '#0d6efd', // Azul (Cuotas)
-                    '#ffc107', // Amarillo (Gas)
-                    '#198754', // Verde (Otros)
-                    '#6c757d'  // Gris
-                ],
-                hoverOffset: 4
+                backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#6c757d']
             }]
         },
-        options: {
+        options: { 
             responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                }
-            }
+            plugins: { legend: { position: 'bottom' } }
         }
     });
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
 </body>
 </html>
