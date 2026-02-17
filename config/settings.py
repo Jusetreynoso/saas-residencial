@@ -174,3 +174,10 @@ import os
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# --- CONFIGURACIÓN DE FORMATO DE NÚMEROS (Estilo RD/USA) ---
+USE_L10N = False  # Importante: Desactivar localización automática de números
+USE_THOUSAND_SEPARATOR = True
+DECIMAL_SEPARATOR = '.'
+THOUSAND_SEPARATOR = ','
+NUMBER_GROUPING = 3
