@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+{% load static %}
+{% load custom_filters %}  <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -12,6 +13,8 @@
             .card { border: 1px solid #ddd !important; }
             body { background-color: white !important; }
         }
+        /* Clase para números negativos en rojo (opcional) */
+        .text-negativo { color: #dc3545; font-weight: bold; }
     </style>
 </head>
 <body class="bg-light">
@@ -43,7 +46,7 @@
             <div class="card text-white bg-success shadow h-100">
                 <div class="card-body text-center">
                     <h6 class="text-uppercase opacity-75">Ingresos Totales ({{ anio }})</h6>
-                    <h2 class="display-6 fw-bold">${{ total_ingresos|floatformat:2 }}</h2>
+                    <h2 class="display-6 fw-bold">{{ total_ingresos|dinero }}</h2>
                 </div>
             </div>
         </div>
@@ -51,7 +54,7 @@
             <div class="card text-white bg-danger shadow h-100">
                 <div class="card-body text-center">
                     <h6 class="text-uppercase opacity-75">Gastos Totales ({{ anio }})</h6>
-                    <h2 class="display-6 fw-bold">${{ total_gastos|floatformat:2 }}</h2>
+                    <h2 class="display-6 fw-bold">{{ total_gastos|dinero }}</h2>
                 </div>
             </div>
         </div>
@@ -59,7 +62,7 @@
             <div class="card text-white bg-primary shadow h-100">
                 <div class="card-body text-center">
                     <h6 class="text-uppercase opacity-75">Balance Neto</h6>
-                    <h2 class="display-6 fw-bold">${{ balance|floatformat:2 }}</h2>
+                    <h2 class="display-6 fw-bold">{{ balance|dinero }}</h2>
                     <small>{% if balance >= 0 %}📈 Superávit{% else %}📉 Déficit{% endif %}</small>
                 </div>
             </div>
@@ -89,14 +92,14 @@
     <div class="card shadow mb-4">
         <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">📒 Libro de Banco - {{ mes_nombre }} {{ anio }}</h5>
-            <span class="badge bg-light text-dark fs-6">Saldo Final: ${{ saldo_final_mes|floatformat:2 }}</span>
+            <span class="badge bg-light text-dark fs-6">Saldo Final: {{ saldo_final_mes|dinero }}</span>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-bordered table-hover mb-0" style="font-size: 0.95rem;">
                     <thead class="table-light">
                         <tr>
-                            <th style="width: 15%;">Fecha</th>
+                            <th style="width: 12%;">Fecha</th>
                             <th>Concepto / Detalle</th>
                             <th class="text-end" style="width: 15%;">Monto</th>
                             <th class="text-end bg-light fw-bold" style="width: 15%;">Balance</th>
@@ -107,7 +110,7 @@
                             <td class="text-muted text-center">---</td>
                             <td><strong>📂 SALDO ANTERIOR (Arrastre histórico)</strong></td>
                             <td class="text-end text-muted">---</td>
-                            <td class="text-end fw-bold">${{ saldo_arranque_mes|floatformat:2 }}</td>
+                            <td class="text-end fw-bold">{{ saldo_arranque_mes|dinero }}</td>
                         </tr>
 
                         {% for mov in tabla_movimientos %}
@@ -120,11 +123,11 @@
                             </td>
                             
                             <td class="text-end fw-bold {% if mov.tipo == 'INGRESO' %}text-success{% else %}text-danger{% endif %}">
-                                {% if mov.tipo == 'GASTO' %}- {% endif %}${{ mov.monto|floatformat:2 }}
+                                {% if mov.tipo == 'GASTO' %}- {% endif %}{{ mov.monto|dinero }}
                             </td>
 
                             <td class="text-end fw-bold text-dark bg-light">
-                                ${{ mov.saldo|floatformat:2 }}
+                                {{ mov.saldo|dinero }}
                             </td>
                         </tr>
                         {% empty %}
@@ -138,7 +141,7 @@
                     <tfoot class="table-light">
                         <tr>
                             <td colspan="3" class="text-end fw-bold">BALANCE FINAL DEL MES:</td>
-                            <td class="text-end fw-bold bg-dark text-white">${{ saldo_final_mes|floatformat:2 }}</td>
+                            <td class="text-end fw-bold bg-dark text-white">{{ saldo_final_mes|dinero }}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -175,7 +178,14 @@
                 }
             ]
         },
-        options: { responsive: true }
+        options: { 
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
     });
 
     // Gráfico de Pastel
