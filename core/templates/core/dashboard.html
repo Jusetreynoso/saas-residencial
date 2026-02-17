@@ -22,10 +22,6 @@
             transform: translateY(-5px);
             box-shadow: 0 8px 15px rgba(0,0,0,0.1);
         }
-        .icon-box {
-            font-size: 2rem;
-            margin-bottom: 10px;
-        }
     </style>
 </head>
 <body class="bg-light">
@@ -83,9 +79,10 @@
                  <button type="button" class="btn btn-danger shadow-sm" data-bs-toggle="modal" data-bs-target="#modalIncidencia">
                     🚨 Reportar Avería
                  </button>
-                 <a href="{% url 'reportar_pago' %}" class="btn btn-success shadow-sm">
+
+                 <button type="button" class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#modalPago">
                     📸 Reportar Pago
-                 </a>
+                 </button>
              </div>
         </div>
 
@@ -366,29 +363,44 @@
 
 </div>
 
-{% if whatsapp_data %}
-<div class="modal fade" id="modalWhatsapp" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg"> 
+<div class="modal fade" id="modalPago" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header bg-success text-white">
-        <h5 class="modal-title">📱 Notificar por WhatsApp</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h5 class="modal-title">📸 Reportar Pago / Transferencia</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <p>La reserva se actualizó. Envía este mensaje al residente:</p>
-        <div class="mb-3">
-            <textarea class="form-control" id="textoWhatsapp" rows="5">{{ whatsapp_data.mensaje }}</textarea>
-        </div>
-        <div class="d-grid gap-2">
-            <a href="https://wa.me/{{ whatsapp_data.telefono }}?text={{ whatsapp_data.mensaje|urlencode }}" target="_blank" class="btn btn-success fw-bold">
-                🚀 Abrir WhatsApp Web
-            </a>
-        </div>
-      </div>
+      <form action="{% url 'reportar_pago' %}" method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="modal-body">
+            <div class="alert alert-light border small text-muted">
+                Sube la foto de tu comprobante. El administrador lo validará y se sumará a tu saldo.
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Monto Transferido ($)</label>
+                <input type="number" step="0.01" name="monto" class="form-control" placeholder="0.00" required>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label fw-bold">Foto del Comprobante</label>
+                <input type="file" name="comprobante" class="form-control" accept="image/*,application/pdf" required>
+                <div class="form-text">Sube una foto clara o el PDF del banco.</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Nota (Opcional)</label>
+                <textarea name="nota_usuario" class="form-control" rows="2" placeholder="Ej: Pago de mantenimiento Marzo"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success fw-bold">🚀 Enviar Reporte</button>
+          </div>
+      </form>
     </div>
   </div>
 </div>
-{% endif %}
 
 <div class="modal fade" id="modalIncidencia" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
@@ -402,7 +414,7 @@
           <div class="modal-body">
             <div class="mb-3">
                 <label class="form-label fw-bold">Título</label>
-                <input type="text" name="titulo" class="form-control" required>
+                <input type="text" name="titulo" class="form-control" placeholder="Ej: Filtración pasillo" required>
             </div>
             <div class="mb-3">
                 <label class="form-label fw-bold">Detalle</label>
@@ -475,6 +487,30 @@
     </div>
   </div>
 </div>
+
+{% if whatsapp_data %}
+<div class="modal fade" id="modalWhatsapp" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg"> 
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">📱 Notificar por WhatsApp</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>La reserva se actualizó. Envía este mensaje al residente:</p>
+        <div class="mb-3">
+            <textarea class="form-control" id="textoWhatsapp" rows="5">{{ whatsapp_data.mensaje }}</textarea>
+        </div>
+        <div class="d-grid gap-2">
+            <a href="https://wa.me/{{ whatsapp_data.telefono }}?text={{ whatsapp_data.mensaje|urlencode }}" target="_blank" class="btn btn-success fw-bold">
+                🚀 Abrir WhatsApp Web
+            </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
