@@ -27,6 +27,8 @@ class Residencial(models.Model):
     # Porcentaje de recargo (ej: 5.00%)
     porcentaje_mora = models.DecimalField(max_digits=5, decimal_places=2, default=5.00, help_text="% de Recargo por mora")
 
+    saldo_inicial = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, help_text="Dinero en banco antes de usar el sistema")
+
     def __str__(self):
         return self.nombre
 
