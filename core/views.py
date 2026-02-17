@@ -522,23 +522,73 @@ def reporte_financiero(request):
     anio_actual = timezone.now().year
     mes_actual = timezone.now().month
 
-    # 1. TOTALES ANUALES (KPIs de arriba)
-    total_ingresos = Factura.objects.filter(residencial=residencial, estado='PAGADO', fecha_pago__year=anio_actual).aggregate(Sum('monto'))['monto__sum'] or 0
-    total_gastos = Gasto.objects.filter(residencial=residencial, fecha_gasto__year=anio_actual).aggregate(Sum('monto'))['monto__sum'] or 0
+    # ---------------------------------------------------------
+    # 1. TOTALES ANUALES (Tarjetas Superiores - KPIs)
+    # ---------------------------------------------------------
+    total_ingresos = Factura.objects.filter(
+        residencial=residencial, 
+        estado='PAGADO', 
+        fecha_pago__year=anio_actual
+    ).aggregate(Sum('monto'))['monto__sum'] or 0
+
+    total_gastos = Gasto.objects.filter(
+        residencial=residencial, 
+        fecha_gasto__year=anio_actual
+    ).aggregate(Sum('monto'))['monto__sum'] or 0
+
     balance = total_ingresos - total_gastos
 
-    # 2. GRÁFICAS (Código anterior, resumido aquí para no ocupar espacio)
-    # ... (Mantén aquí tu lógica de las gráficas de Barras y Pastel que ya tenías) ...
-    # Si la necesitas completa dímelo, pero asumo que ya la tienes del paso anterior.
-    # Solo asegúrate de definir las variables bar_labels, bar_ingresos, etc.
-    # Pongo valores vacíos por si acaso para que no de error si copias y pegas:
-    bar_labels, bar_ingresos, bar_gastos = [], [], []
-    pie_labels, pie_data = [], [] 
-
-
-    # --- 3. LÓGICA DEL LIBRO DIARIO (NUEVO) ---
+    # ---------------------------------------------------------
+    # 2. DATOS PARA GRÁFICOS (Barras y Pastel) - ¡RECUPERADOS!
+    # ---------------------------------------------------------
     
-    # A. Calcular el SALDO PREVIO (Desde el inicio de los tiempos hasta el día 1 de este mes)
+    # A. Gráfico de Barras (Evolución Mensual)
+    ingresos_qs = Factura.objects.filter(
+        residencial=residencial,
+        estado='PAGADO',
+        fecha_pago__year=anio_actual
+    ).annotate(mes=TruncMonth('fecha_pago')).values('mes').annotate(total=Sum('monto')).order_by('mes')
+
+    gastos_qs = Gasto.objects.filter(
+        residencial=residencial,
+        fecha_gasto__year=anio_actual
+    ).annotate(mes=TruncMonth('fecha_gasto')).values('mes').annotate(total=Sum('monto')).order_by('mes')
+
+    datos_por_mes = {}
+    
+    # Procesar Ingresos
+    for i in ingresos_qs:
+        mes_str = i['mes'].strftime('%B') 
+        if mes_str not in datos_por_mes: datos_por_mes[mes_str] = {'ingreso': 0, 'gasto': 0}
+        datos_por_mes[mes_str]['ingreso'] = float(i['total'])
+
+    # Procesar Gastos
+    for g in gastos_qs:
+        mes_str = g['mes'].strftime('%B')
+        if mes_str not in datos_por_mes: datos_por_mes[mes_str] = {'ingreso': 0, 'gasto': 0}
+        datos_por_mes[mes_str]['gasto'] = float(g['total'])
+
+    # Listas finales para Chart.js
+    bar_labels = list(datos_por_mes.keys())
+    bar_ingresos = [d['ingreso'] for d in datos_por_mes.values()]
+    bar_gastos = [d['gasto'] for d in datos_por_mes.values()]
+
+    # B. Gráfico de Pastel (Fuente de Ingresos)
+    ingresos_tipo = Factura.objects.filter(
+        residencial=residencial,
+        estado='PAGADO',
+        fecha_pago__year=anio_actual
+    ).values('tipo').annotate(total=Sum('monto'))
+
+    pie_labels = [item['tipo'] for item in ingresos_tipo]
+    pie_data = [float(item['total']) for item in ingresos_tipo]
+
+
+    # ---------------------------------------------------------
+    # 3. DATOS PARA LIBRO DIARIO (Tabla Excel)
+    # ---------------------------------------------------------
+    
+    # A. Saldo Histórico (Todo lo anterior al mes actual)
     ingresos_historicos = Factura.objects.filter(
         residencial=residencial, 
         estado='PAGADO', 
@@ -550,11 +600,11 @@ def reporte_financiero(request):
         fecha_gasto__lt=timezone.datetime(anio_actual, mes_actual, 1)
     ).aggregate(Sum('monto'))['monto__sum'] or 0
 
-    # Saldo Inicial del Banco + Todo lo que entró antes - Todo lo que salió antes
+    # Fórmula: Saldo Inicial Configurado + Ingresos Viejos - Gastos Viejos
     saldo_acumulado = residencial.saldo_inicial + ingresos_historicos - gastos_historicos
-    saldo_inicial_mes = saldo_acumulado # Guardamos este valor para mostrarlo al inicio de la tabla
+    saldo_inicial_mes = saldo_acumulado 
 
-    # B. Obtener movimientos DEL MES ACTUAL
+    # B. Movimientos del Mes Actual
     mov_ingresos = Factura.objects.filter(
         residencial=residencial, 
         estado='PAGADO', 
@@ -568,11 +618,10 @@ def reporte_financiero(request):
         fecha_gasto__month=mes_actual
     )
 
-    # C. Unir ambas listas y ordenar por fecha
-    # Añadimos un atributo 'tipo_mov' para saber qué es cada cosa en el HTML
+    # C. Unir y Ordenar
     for i in mov_ingresos: 
         i.tipo_mov = 'INGRESO'
-        i.fecha_mov = i.fecha_pago # Unificamos nombre de fecha
+        i.fecha_mov = i.fecha_pago
         
     for g in mov_gastos: 
         g.tipo_mov = 'GASTO'
@@ -583,7 +632,7 @@ def reporte_financiero(request):
         key=attrgetter('fecha_mov')
     )
 
-    # D. Calcular el saldo línea por línea
+    # D. Calcular tabla línea por línea
     tabla_movimientos = []
     for mov in lista_movimientos:
         if mov.tipo_mov == 'INGRESO':
@@ -593,26 +642,31 @@ def reporte_financiero(request):
         
         tabla_movimientos.append({
             'fecha': mov.fecha_mov,
-            'concepto': mov.concepto if mov.tipo_mov == 'INGRESO' else mov.descripcion, # Ojo con el nombre de tus campos
+            'concepto': mov.concepto if mov.tipo_mov == 'INGRESO' else mov.descripcion,
             'tipo': mov.tipo_mov,
             'monto': mov.monto,
             'saldo': saldo_acumulado,
             'usuario': mov.usuario.username if hasattr(mov, 'usuario') and mov.usuario else 'Admin'
         })
 
+    # ---------------------------------------------------------
+    # 4. CONTEXTO FINAL (Empaquetar todo para el HTML)
+    # ---------------------------------------------------------
     context = {
         'anio': anio_actual,
         'mes_nombre': timezone.now().strftime('%B'),
         'total_ingresos': total_ingresos,
         'total_gastos': total_gastos,
         'balance': balance,
-        # Gráficas
+        
+        # Datos para Gráficas (JSON Strings)
         'bar_labels': json.dumps(bar_labels),
         'bar_ingresos': json.dumps(bar_ingresos),
         'bar_gastos': json.dumps(bar_gastos),
         'pie_labels': json.dumps(pie_labels),
         'pie_data': json.dumps(pie_data),
-        # Nuevo Libro Diario
+        
+        # Datos para Tabla Libro Diario
         'saldo_inicial_banco': residencial.saldo_inicial,
         'saldo_arranque_mes': saldo_inicial_mes,
         'tabla_movimientos': tabla_movimientos,
