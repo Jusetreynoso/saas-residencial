@@ -215,8 +215,8 @@ class LecturaGas(models.Model):
     
     fecha_lectura = models.DateField(default=timezone.now)
     
-    lectura_anterior = models.DecimalField(max_digits=10, decimal_places=2)
-    lectura_actual = models.DecimalField(max_digits=10, decimal_places=2)
+    lectura_anterior = models.DecimalField(max_digits=10, decimal_places=3)
+    lectura_actual = models.DecimalField(max_digits=10, decimal_places=3)
     precio_galon_mes = models.DecimalField(max_digits=6, decimal_places=2)
     
     # Default decimal para evitar conflictos con float

@@ -76,28 +76,27 @@ class ReservaForm(forms.ModelForm):
 # ==========================================
 # 2. FORMULARIO DE FACTURACIÓN DE GAS
 # ==========================================
+# En core/forms.py
+
 class LecturaGasForm(forms.ModelForm):
     class Meta:
         model = LecturaGas
-        fields = ['apartamento', 'lectura_anterior', 'lectura_actual', 'precio_galon_mes']
-        
+        fields = ['apartamento', 'lectura_actual', 'fecha_lectura'] # Asegúrate de incluir fecha_lectura
         widgets = {
-            'apartamento': forms.Select(attrs={'class': 'form-select'}),
-            'lectura_anterior': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Ej: 100.5'}),
-            'lectura_actual': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Ej: 110.5'}),
-            'precio_galon_mes': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Ej: 150.00'}),
-        }
-        labels = {
-            'lectura_anterior': 'Lectura Anterior (m3)',
-            'lectura_actual': 'Lectura Actual (m3)',
-            'precio_galon_mes': 'Precio Compra Galón ($)'
+            'fecha_lectura': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            # AQUÍ ESTÁ EL TRUCO PARA LOS 3 DECIMALES Y EL PUNTO:
+            'lectura_actual': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.001',  # Permite 3 decimales
+                'placeholder': '0.000'
+            }),
         }
 
     def __init__(self, user, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Filtramos solo los apartamentos de SU residencial
         if user.residencial:
-            self.fields['apartamento'].queryset = Apartamento.objects.filter(residencial=user.residencial)
-
+            self.fields['apartamento'].queryset = Apartamento.objects.filter(residencial=user.residencial).order_by('numero')
 # ==========================================
 # 3. FORMULARIO DE GASTOS
 # ==========================================
