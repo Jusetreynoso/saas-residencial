@@ -74,29 +74,50 @@ class ReservaForm(forms.ModelForm):
         return cleaned_data
 
 # ==========================================
-# 2. FORMULARIO DE FACTURACIÓN DE GAS
+# 2. FORMULARIO DE FACTURACIÓN DE GAS (MODIFICADO)
 # ==========================================
 class LecturaGasForm(forms.ModelForm):
     class Meta:
         model = LecturaGas
-        fields = ['apartamento', 'lectura_anterior', 'lectura_actual', 'precio_galon_mes']
+        # Incluimos TODOS los campos para que no desaparezcan del HTML
+        fields = ['apartamento', 'lectura_anterior', 'lectura_actual', 'precio_galon_mes', 'fecha_lectura']
         
         widgets = {
             'apartamento': forms.Select(attrs={'class': 'form-select'}),
-            'lectura_anterior': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Ej: 100.5'}),
-            'lectura_actual': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Ej: 110.5'}),
-            'precio_galon_mes': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Ej: 150.00'}),
+            'fecha_lectura': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            
+            # NO EDITABLE (Solo lectura)
+            'lectura_anterior': forms.NumberInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            
+            # AQUÍ EL CAMBIO PARA LOS 3 DECIMALES
+            'lectura_actual': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.001',   # <--- Permite 3 decimales (123.456)
+                'placeholder': '0.000'
+            }),
+            
+            'precio_galon_mes': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.01', 
+                'placeholder': '0.00'
+            }),
         }
         labels = {
             'lectura_anterior': 'Lectura Anterior (m3)',
             'lectura_actual': 'Lectura Actual (m3)',
-            'precio_galon_mes': 'Precio Compra Galón ($)'
+            'precio_galon_mes': 'Precio Compra Galón ($)',
+            'fecha_lectura': 'Fecha de Corte'
         }
 
     def __init__(self, user, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if user.residencial:
-            self.fields['apartamento'].queryset = Apartamento.objects.filter(residencial=user.residencial)
+            self.fields['apartamento'].queryset = Apartamento.objects.filter(residencial=user.residencial).order_by('numero')
+            
+            # Pre-llenar precio (Opcional)
+            ultimo = LecturaGas.objects.filter(residencial=user.residencial).last()
+            if ultimo:
+                self.fields['precio_galon_mes'].initial = ultimo.precio_galon_mes
 
 # ==========================================
 # 3. FORMULARIO DE GASTOS
@@ -131,10 +152,10 @@ class AvisoForm(forms.ModelForm):
         }
 
 # ==========================================
-# 5. GESTIÓN DE USUARIOS (CORREGIDO)
+# 5. GESTIÓN DE USUARIOS
 # ==========================================
 class RegistroVecinoForm(forms.ModelForm):
-    # Campo extra para seleccionar apartamento (no es obligatorio en el modelo User, pero aquí sí lo usamos)
+    # Campo extra para seleccionar apartamento
     apartamento = forms.ModelChoiceField(
         queryset=None, 
         required=False, 
@@ -143,8 +164,8 @@ class RegistroVecinoForm(forms.ModelForm):
     )
 
     class Meta:
-        model = Usuario  # <--- AQUÍ ESTABA EL ERROR (Debe ser Usuario, no User)
-        fields = ['username', 'first_name', 'last_name', 'email', 'password', 'telefono'] # Agregamos telefono aquí
+        model = Usuario 
+        fields = ['username', 'first_name', 'last_name', 'email', 'password', 'telefono'] 
         
         widgets = {
             'password': forms.PasswordInput(attrs={'class': 'form-control'}),
@@ -157,13 +178,12 @@ class RegistroVecinoForm(forms.ModelForm):
 
     def __init__(self, admin_user, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Filtramos para que el admin solo vea SU edificio
         if admin_user.residencial:
             self.fields['apartamento'].queryset = Apartamento.objects.filter(residencial=admin_user.residencial)
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.set_password(self.cleaned_data["password"]) # Encriptar contraseña siempre
+        user.set_password(self.cleaned_data["password"]) 
         if commit:
             user.save()
         return user
@@ -179,8 +199,6 @@ class IncidenciaForm(forms.ModelForm):
             'foto': forms.FileInput(attrs={'class': 'form-control'}),
         }
 
-
-
 class EditarVecinoForm(forms.ModelForm):
     class Meta:
         model = Usuario
@@ -192,7 +210,6 @@ class EditarVecinoForm(forms.ModelForm):
             'telefono': forms.TextInput(attrs={'class': 'form-control'}),
             'apartamento': forms.Select(attrs={'class': 'form-select'}),
         }
-
 
 
 class AbonoForm(forms.Form):
