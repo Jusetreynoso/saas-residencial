@@ -64,7 +64,13 @@ class Usuario(AbstractUser):
     residencial = models.ForeignKey(Residencial, on_delete=models.CASCADE, null=True, blank=True)
     apartamento = models.ForeignKey(Apartamento, on_delete=models.SET_NULL, null=True, blank=True, related_name='habitantes')
 
-    saldo_a_favor = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    saldo_favor_mantenimiento = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    saldo_favor_gas = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    @property
+    def saldo_total(self):
+        return self.saldo_favor_mantenimiento + self.saldo_favor_gas
 
     def __str__(self):
         return f"{self.username} ({self.get_rol_display()})"
@@ -277,12 +283,21 @@ class Incidencia(models.Model):
         return f"{self.titulo} - {self.usuario.username}"
     
 class ReportePago(models.Model):
+    # --- TUS ESTADOS ORIGINALES (INTACTOS) ---
     ESTADOS = [
         ('PENDIENTE', 'Pendiente de Revisión'),
         ('APROBADO', 'Aprobado'),
         ('RECHAZADO', 'Rechazado'),
     ]
 
+    # --- AGREGAMOS ESTO (FALTABA DEFINIRLO) ---
+    OPCIONES_TIPO = [
+        ('MANTENIMIENTO', 'Cuota / Mantenimiento'),
+        ('GAS', 'Consumo de Gas'),
+        ('OTRO', 'Otro')
+    ]
+
+    # --- TUS CAMPOS ORIGINALES (INTACTOS) ---
     residencial = models.ForeignKey(Residencial, on_delete=models.CASCADE)
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
     fecha_reporte = models.DateTimeField(auto_now_add=True)
@@ -291,6 +306,9 @@ class ReportePago(models.Model):
     nota_usuario = models.TextField(blank=True, null=True, help_text="Ej: Pago de Marzo y Abril")
     estado = models.CharField(max_length=20, choices=ESTADOS, default='PENDIENTE')
     comentario_admin = models.TextField(blank=True, null=True)
+    
+    # --- CAMPO NUEVO (AHORA SÍ FUNCIONA PORQUE OPCIONES_TIPO YA EXISTE ARRIBA) ---
+    tipo_pago = models.CharField(max_length=20, choices=OPCIONES_TIPO, default='MANTENIMIENTO')
 
     def __str__(self):
         return f"Pago ${self.monto} - {self.usuario.username}"

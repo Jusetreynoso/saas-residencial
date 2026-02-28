@@ -242,7 +242,7 @@ def registrar_lectura_gas(request):
             mes_actual = timezone.now().month
             anio_actual = timezone.now().year
             
-            # 1. Validar que no exista lectura este mes
+            # 1. Validar duplicados
             existe = LecturaGas.objects.filter(
                 residencial=request.user.residencial,
                 apartamento=apartamento,
@@ -256,19 +256,17 @@ def registrar_lectura_gas(request):
                 lectura = form.save(commit=False)
                 lectura.residencial = request.user.residencial
                 
-                # 2. Validar consistencia de lectura
+                # 2. Validar consistencia
                 if lectura.lectura_actual < lectura.lectura_anterior:
                     messages.error(request, "⛔ Error: La lectura actual es menor a la anterior.")
                 else:
-                    # Guardamos la lectura (El modelo calcula totales en su método save)
                     lectura.save() 
-                    
                     residente = lectura.apartamento.habitantes.first()
                     
                     if residente:
                         consumo = lectura.lectura_actual - lectura.lectura_anterior
                         
-                        # 3. Crear la factura (Nace PENDIENTE por defecto)
+                        # 3. Crear Factura
                         nueva_factura = Factura.objects.create(
                             residencial=request.user.residencial,
                             usuario=residente,
@@ -277,71 +275,56 @@ def registrar_lectura_gas(request):
                             monto=lectura.total_a_pagar,
                             fecha_vencimiento=timezone.now().date() + timedelta(days=15),
                             estado='PENDIENTE',
-                            saldo_pendiente=lectura.total_a_pagar # Inicialmente debe todo
+                            saldo_pendiente=lectura.total_a_pagar
                         )
                         
-                        # 4. LÓGICA AUTOMÁTICA DE SALDO A FAVOR (INTACTA)
+                        # 4. LÓGICA AUTOMÁTICA (AHORA SOLO TOCA SALDO DE GAS)
                         msg_extra = ""
-                        if residente.saldo_a_favor > 0:
-                            # CASO A: El saldo cubre toda la factura
-                            if residente.saldo_a_favor >= nueva_factura.monto:
-                                residente.saldo_a_favor -= nueva_factura.monto
+                        # CAMBIO IMPORTANTE AQUÍ: Usamos saldo_favor_gas
+                        if residente.saldo_favor_gas > 0:
+                            if residente.saldo_favor_gas >= nueva_factura.monto:
+                                residente.saldo_favor_gas -= nueva_factura.monto
                                 nueva_factura.monto_pagado = nueva_factura.monto
                                 nueva_factura.saldo_pendiente = 0
                                 nueva_factura.estado = 'PAGADO'
                                 nueva_factura.fecha_pago = timezone.now().date()
-                                msg_extra = " (✅ Pagada con saldo a favor)"
-                            
-                            # CASO B: El saldo es menor a la factura (Abono parcial)
+                                msg_extra = " (✅ Pagada con saldo de Gas)"
                             else:
-                                abono = residente.saldo_a_favor
-                                residente.saldo_a_favor = 0 # Se gasta todo
+                                abono = residente.saldo_favor_gas
+                                residente.saldo_favor_gas = 0 
                                 nueva_factura.monto_pagado = abono
                                 nueva_factura.saldo_pendiente = nueva_factura.monto - abono
-                                msg_extra = f" (💰 Se descontaron ${abono} de su saldo)"
+                                msg_extra = f" (💰 Se descontaron ${abono} de su saldo de Gas)"
         
-                            # Guardamos los cambios de saldo
                             residente.save()
                             nueva_factura.save()
 
-                        # Vinculamos factura a lectura
                         lectura.factura_generada = nueva_factura
                         lectura.save()
-                        
                         messages.success(request, f"✅ Factura generada para {apartamento.numero}: ${lectura.total_a_pagar}{msg_extra}")
                     else:
-                        messages.warning(request, f"⚠️ Lectura guardada, pero el apto {apartamento.numero} no tiene dueño asignado (No se generó factura).")
+                        messages.warning(request, f"⚠️ Lectura guardada, pero el apto {apartamento.numero} no tiene dueño asignado.")
                 
             return redirect('registrar_lectura_gas')
     else:
-        # GET: Mostrar formulario vacío
         ultima_general = LecturaGas.objects.filter(residencial=request.user.residencial).last()
         precio = ultima_general.precio_galon_mes if ultima_general else 0.00
         form = LecturaGasForm(request.user, initial={'precio_galon_mes': precio})
 
-    # --- ZONA EDITADA: Preparación de datos para la Tabla y el Script ---
+    # Datos para la tabla y el script
     apartamentos = Apartamento.objects.filter(residencial=request.user.residencial).order_by('numero')
     estado_medidores = []
 
     for apt in apartamentos:
         ultima = LecturaGas.objects.filter(apartamento=apt).order_by('-fecha_lectura').first()
-        
         datos = {
-            'id': apt.id,   # NECESARIO para el script de auto-llenado
+            'id': apt.id,
             'apto': apt.numero,
             'ultima_fecha': ultima.fecha_lectura if ultima else "---",
-            
-            # Datos de Lecturas (para ver en tabla y script)
             'lectura_anterior': ultima.lectura_anterior if ultima else 0.000,
             'lectura_actual': ultima.lectura_actual if ultima else 0.000,
-            
-            # Diferencia en m3 (Dato informativo)
             'consumo': (ultima.lectura_actual - ultima.lectura_anterior) if ultima else 0.00,
-            
-            # Galones reales facturados (NECESARIO para la columna nueva de la tabla)
             'galones': ultima.consumo_galones if ultima else 0.00,
-            
-            # Dinero
             'precio': ultima.precio_galon_mes if ultima else 0.00,
             'total': ultima.total_a_pagar if ultima else 0.00,
         }
@@ -1029,10 +1012,9 @@ def gestionar_reportes_pago(request):
     if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
         return redirect('dashboard')
 
-    # Si enviaron el formulario de Aprobar/Rechazar
     if request.method == 'POST':
         reporte_id = request.POST.get('reporte_id')
-        accion = request.POST.get('accion') # 'aprobar' o 'rechazar'
+        accion = request.POST.get('accion') 
         
         reporte = get_object_or_404(ReportePago, pk=reporte_id, residencial=request.user.residencial)
         
@@ -1040,50 +1022,58 @@ def gestionar_reportes_pago(request):
             if accion == 'aprobar':
                 vecino = reporte.usuario
                 monto_disponible = reporte.monto
+                tipo_pago = reporte.tipo_pago  # ¿Qué está pagando?
+
+                # 1. FILTRO INTELIGENTE
+                # Si es GAS, buscamos facturas de GAS. Si es MANTENIMIENTO, buscamos CUOTAS.
+                filtro_tipo = 'GAS' if tipo_pago == 'GAS' else 'CUOTA'
                 
-                # --- ALGORITMO MATA-DEUDAS (FIFO) ---
-                # 1. Buscamos facturas pendientes ordenadas por fecha (la más vieja primero)
+                # Buscamos facturas viejas DE ESE TIPO
                 facturas_pendientes = Factura.objects.filter(
                     usuario=vecino, 
-                    estado='PENDIENTE'
+                    estado='PENDIENTE',
+                    tipo=filtro_tipo 
                 ).order_by('fecha_vencimiento')
 
                 facturas_pagadas = 0
 
+                # Algoritmo Mata-Deudas (FIFO)
                 for factura in facturas_pendientes:
-                    if monto_disponible <= 0:
-                        break # Se acabó el dinero
+                    if monto_disponible <= 0: break 
 
                     deuda_factura = factura.saldo_pendiente
 
                     if monto_disponible >= deuda_factura:
-                        # LE ALCANZA para pagar esta factura completa
                         monto_disponible -= deuda_factura
                         factura.saldo_pendiente = 0
                         factura.estado = 'PAGADO'
-                        factura.monto_pagado = factura.monto # Asumimos pago total
+                        factura.monto_pagado = factura.monto 
                         factura.fecha_pago = timezone.now().date()
                         factura.save()
                         facturas_pagadas += 1
                     else:
-                        # NO LE ALCANZA (Abono parcial a esta factura)
                         factura.saldo_pendiente -= monto_disponible
-                        # El estado sigue siendo PENDIENTE pero debe menos
                         monto_disponible = 0 
                         factura.save()
                 
-                # 2. Si sobró dinero después de pagar todo, va al Saldo a Favor
+                # 2. EL SOBRANTE VA AL BOLSILLO CORRECTO
+                bolsillo_nombre = ""
                 if monto_disponible > 0:
-                    saldo_actual = vecino.saldo_a_favor or 0
-                    vecino.saldo_a_favor = saldo_actual + monto_disponible
+                    if tipo_pago == 'GAS':
+                        vecino.saldo_favor_gas += monto_disponible
+                        bolsillo_nombre = "GAS"
+                    else:
+                        # Mantenimiento u Otro va al saldo principal
+                        vecino.saldo_favor_mantenimiento += monto_disponible
+                        bolsillo_nombre = "MANTENIMIENTO"
+                    
                     vecino.save()
-                    msg_extra = f"y sobraron ${monto_disponible} para saldo a favor."
+                    msg_extra = f"y sobraron ${monto_disponible} al saldo de {bolsillo_nombre}."
                 else:
                     msg_extra = "cubriendo deuda pendiente."
 
-                # Actualizamos el reporte
                 reporte.estado = 'APROBADO'
-                reporte.comentario_admin = f"Pago aplicado automáticamente. Se pagaron {facturas_pagadas} facturas."
+                reporte.comentario_admin = f"Pago aplicado a {filtro_tipo}. Se pagaron {facturas_pagadas} facturas."
                 reporte.save()
 
                 messages.success(request, f"Pago de {vecino.first_name} aplicado exitosamente {msg_extra}")
@@ -1095,7 +1085,6 @@ def gestionar_reportes_pago(request):
             
             return redirect('gestionar_reportes_pago')
 
-    # LISTADO: Pendientes arriba
     reportes = ReportePago.objects.filter(residencial=request.user.residencial).order_by('estado', '-fecha_reporte')
     return render(request, 'core/gestionar_reportes.html', {'reportes': reportes})
 

@@ -242,9 +242,15 @@ class AbonoForm(forms.Form):
 class ReportePagoForm(forms.ModelForm):
     class Meta:
         model = ReportePago
-        fields = ['monto', 'comprobante', 'nota_usuario']
+        fields = ['monto', 'tipo_pago', 'comprobante', 'nota_usuario']
         widgets = {
             'monto': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00'}),
+            'tipo_pago': forms.Select(attrs={'class': 'form-select'}),
             'nota_usuario': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Ej: Transferencia Banco Popular...'}),
             'comprobante': forms.FileInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'tipo_pago': 'Concepto del Pago',
+            'monto': 'Monto Pagado',
+            'comprobante': 'Foto del Comprobante'
         }

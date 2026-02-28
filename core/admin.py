@@ -3,22 +3,22 @@ from django.contrib.auth.admin import UserAdmin
 # 1. ACTUALIZAMOS IMPORTS: Agregamos Incidencia
 from .models import (
     Usuario, Residencial, Apartamento, AreaSocial, 
-    Reserva, BloqueoFecha, Gasto, Factura, LecturaGas, Aviso, Incidencia
+    Reserva, BloqueoFecha, Gasto, Factura, LecturaGas, Aviso, Incidencia, ReportePago, Aviso
 )
 
 # --- CONFIGURACIÓN DE USUARIO ---
 class CustomUserAdmin(UserAdmin):
     model = Usuario
     # AGREGADO: 'saldo_a_favor' para verlo en la lista
-    list_display = ['username', 'first_name', 'last_name', 'rol', 'apartamento', 'saldo_a_favor', 'residencial']
+    list_display = ['username', 'first_name', 'last_name', 'rol', 'apartamento', 'saldo_favor_mantenimiento', 'saldo_favor_gas', 'residencial']
     
     # AGREGADO: 'saldo_a_favor' en fieldsets para poder EDITARLO manualmente
     fieldsets = UserAdmin.fieldsets + (
-        ('Información Residencial', {'fields': ('rol', 'telefono', 'residencial', 'apartamento', 'saldo_a_favor')}),
+        ('Información Residencial', {'fields': ('rol', 'telefono', 'residencial', 'apartamento', 'saldo_favor_mantenimiento', 'saldo_favor_gas')}),
     )
     
     add_fieldsets = UserAdmin.add_fieldsets + (
-        (None, {'fields': ('rol', 'telefono', 'residencial', 'apartamento', 'saldo_a_favor')}),
+        (None, {'fields': ('rol', 'telefono', 'residencial', 'apartamento', 'saldo_favor_mantenimiento', 'saldo_favor_gas')}),
     )
 
 # --- CONFIGURACIÓN DE RESIDENCIAL ---
@@ -84,3 +84,4 @@ admin.site.register(Apartamento)
 admin.site.register(AreaSocial)
 admin.site.register(Reserva, ReservaAdmin)
 admin.site.register(BloqueoFecha, BloqueoFechaAdmin)
+admin.site.register(ReportePago)
