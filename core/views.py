@@ -1098,37 +1098,48 @@ def balance_residencial(request):
     
     data_financiera = []
     
+    # Acumuladores globales
     total_deuda_global = 0
-    total_saldo_favor_global = 0
+    total_favor_mant_global = 0  # Nuevo acumulador Mant.
+    total_favor_gas_global = 0   # Nuevo acumulador Gas
 
     for apt in apartamentos:
         dueno = apt.habitantes.first()
         
         deuda = 0
-        saldo_favor = 0
+        saldo_mant = 0
+        saldo_gas = 0
         nombre_dueno = "--- Sin Asignar ---"
         
         if dueno:
             nombre_dueno = f"{dueno.first_name} {dueno.last_name}"
-            saldo_favor = dueno.saldo_a_favor or 0
             
-            # Calculamos deuda real
+            # --- CORRECCIÓN CLAVE: Leemos los dos bolsillos nuevos ---
+            saldo_mant = dueno.saldo_favor_mantenimiento or 0
+            saldo_gas = dueno.saldo_favor_gas or 0
+            
+            # Calculamos deuda real (Sumando saldos pendientes)
             facturas_pendientes = Factura.objects.filter(usuario=dueno, estado='PENDIENTE')
-            deuda = sum((f.saldo_pendiente or f.monto) for f in facturas_pendientes)
+            deuda = sum(f.saldo_pendiente for f in facturas_pendientes)
 
+        # Agregamos los datos desglosados a la lista
         data_financiera.append({
             'apto': apt.numero,
             'dueno': nombre_dueno,
             'deuda': deuda,
-            'saldo_favor': saldo_favor,
+            'saldo_mant': saldo_mant, # Columna nueva
+            'saldo_gas': saldo_gas,   # Columna nueva
             'estado': 'Moroso' if deuda > 0 else 'Al día'
         })
         
+        # Sumamos a los totales globales
         total_deuda_global += deuda
-        total_saldo_favor_global += saldo_favor
+        total_favor_mant_global += saldo_mant
+        total_favor_gas_global += saldo_gas
 
     return render(request, 'core/balance_residencial.html', {
         'data': data_financiera,
         'total_deuda': total_deuda_global,
-        'total_saldo': total_saldo_favor_global
+        'total_mant': total_favor_mant_global, # Pasamos total Mant.
+        'total_gas': total_favor_gas_global    # Pasamos total Gas.
     })

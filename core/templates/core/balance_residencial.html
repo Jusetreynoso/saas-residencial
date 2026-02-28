@@ -2,100 +2,108 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Balance Global - SaaS Residencial</title>
+    <title>Balance Residencial</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
 
-<nav class="navbar navbar-dark bg-primary mb-4">
+<nav class="navbar navbar-dark bg-primary mb-4 shadow">
     <div class="container">
-        <a class="navbar-brand" href="{% url 'dashboard' %}">🏢 Volver al Dashboard</a>
-        
-        <form action="{% url 'logout' %}" method="post" class="d-flex">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-outline-light btn-sm fw-bold">Salir</button>
-        </form>
+        <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">⬅️ Volver al Dashboard</a>
+        <span class="text-white">Estado de Cuentas por Apartamento</span>
     </div>
 </nav>
 
-<div class="container mt-4">
-    
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-dark">📊 Estado Financiero por Apartamento</h2>
-        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">↩️ Volver</a>
-    </div>
+<div class="container pb-5">
 
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card bg-danger text-white shadow h-100">
-                <div class="card-body text-center">
-                    <h3>${{ total_deuda }}</h3>
-                    <p class="mb-0 fw-bold">Total por Cobrar (Deuda en Calle)</p>
+    <div class="row mb-4 text-center">
+        <div class="col-md-4">
+            <div class="card border-danger shadow-sm mb-2">
+                <div class="card-body py-2">
+                    <small class="text-muted text-uppercase fw-bold">Total Deuda (Calle)</small>
+                    <h3 class="text-danger fw-bold mb-0">${{ total_deuda|floatformat:2 }}</h3>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card bg-success text-white shadow h-100">
-                <div class="card-body text-center">
-                    <h3>${{ total_saldo }}</h3>
-                    <p class="mb-0 fw-bold">Total Saldo a Favor (Dinero Adelantado)</p>
+        <div class="col-md-4">
+            <div class="card border-success shadow-sm mb-2">
+                <div class="card-body py-2">
+                    <small class="text-muted text-uppercase fw-bold">Saldo Favor (Cuotas)</small>
+                    <h3 class="text-success fw-bold mb-0">${{ total_mant|floatformat:2 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-warning shadow-sm mb-2">
+                <div class="card-body py-2">
+                    <small class="text-muted text-uppercase fw-bold">Saldo Favor (Gas)</small>
+                    <h3 class="text-warning fw-bold mb-0" style="color: #d39e00;">${{ total_gas|floatformat:2 }}</h3>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card shadow mb-5">
-        <div class="card-header bg-dark text-white">
-            Detalle por Unidad
+    <div class="card shadow">
+        <div class="card-header bg-dark text-white fw-bold">
+            🏢 Detalle por Apartamento
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-striped table-hover mb-0 align-middle">
-                    <thead class="table-secondary">
-                        <tr>
-                            <th>Apto</th>
-                            <th>Propietario</th>
-                            <th class="text-end">Deuda Actual</th>
-                            <th class="text-end">Saldo a Favor</th>
-                            <th class="text-center">Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in data %}
-                        <tr>
-                            <td class="fw-bold">{{ item.apto }}</td>
-                            <td>{{ item.dueno }}</td>
-                            
-                            <td class="text-end">
-                                {% if item.deuda > 0 %}
-                                    <span class="text-danger fw-bold">${{ item.deuda }}</span>
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-center">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>Apto</th>
+                        <th class="text-start">Propietario</th>
+                        <th>Deuda</th>
+                        <th>Saldo Cuotas</th>
+                        <th>Saldo Gas</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in data %}
+                    <tr>
+                        <td class="fw-bold">{{ item.apto }}</td>
+                        <td class="text-start">{{ item.dueno }}</td>
+                        
+                        <td>
+                            {% if item.deuda > 0 %}
+                                <span class="badge bg-danger text-white">${{ item.deuda|floatformat:2 }}</span>
+                            {% else %}
+                                <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
 
-                            <td class="text-end">
-                                {% if item.saldo_favor > 0 %}
-                                    <span class="text-success fw-bold">${{ item.saldo_favor }}</span>
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
+                        <td class="text-success fw-bold">
+                            {% if item.saldo_mant > 0 %}
+                                ${{ item.saldo_mant|floatformat:2 }}
+                            {% else %}
+                                <span class="text-muted fw-normal small">0.00</span>
+                            {% endif %}
+                        </td>
 
-                            <td class="text-center">
-                                {% if item.deuda > 0 %}
-                                    <span class="badge bg-danger">En Mora</span>
-                                {% elif item.saldo_favor > 0 %}
-                                    <span class="badge bg-success">Con Crédito</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">En Cero</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                        <td class="text-warning fw-bold" style="color: #d39e00;">
+                            {% if item.saldo_gas > 0 %}
+                                ${{ item.saldo_gas|floatformat:2 }}
+                            {% else %}
+                                <span class="text-muted fw-normal small">0.00</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if item.estado == 'Moroso' %}
+                                <span class="badge bg-danger">Moroso</span>
+                            {% else %}
+                                <span class="badge bg-success">Al día</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-3">No hay apartamentos registrados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

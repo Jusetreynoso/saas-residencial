@@ -138,14 +138,14 @@
                                     <li>
                                         <a class="dropdown-item text-primary fw-bold" href="{% url 'generar_cuotas_masivas' %}" 
                                            onclick="return confirm('¿Generar cuotas de MANTENIMIENTO de este mes?')">
-                                           🏢 Generar Cuotas Mensuales
+                                            🏢 Generar Cuotas Mensuales
                                         </a>
                                     </li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
                                         <a class="dropdown-item text-danger" href="{% url 'aplicar_moras' %}"
                                            onclick="return confirm('¿Aplicar recargos por mora a vencidos?')">
-                                           ⏳ Aplicar Moras / Recargos
+                                            ⏳ Aplicar Moras / Recargos
                                         </a>
                                     </li>
                                 </ul>
@@ -250,16 +250,33 @@
 
         <div class="row">
             <div class="col-md-6">
-                {% if user.saldo_a_favor > 0 %}
-                <div class="alert alert-success d-flex align-items-center mb-3 shadow-sm">
-                    <div class="fs-1 me-3">🤑</div>
-                    <div>
-                        <h5 class="alert-heading mb-0">¡Tienes Saldo a Favor!</h5>
-                        <p class="mb-0">Disponible: <strong>${{ user.saldo_a_favor }}</strong>. Se usará en tu próxima factura.</p>
+                
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <div class="card border-success border-2 shadow-sm h-100">
+                            <div class="card-body p-2 text-center">
+                                <div class="text-success small fw-bold text-uppercase mb-1">
+                                    <i class="bi bi-wallet2"></i> Saldo Cuotas
+                                </div>
+                                <div class="fs-5 fw-bold text-dark">
+                                    ${{ user.saldo_favor_mantenimiento|floatformat:2 }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card border-warning border-2 shadow-sm h-100">
+                            <div class="card-body p-2 text-center">
+                                <div class="text-warning small fw-bold text-uppercase mb-1">
+                                    <i class="bi bi-fire"></i> Saldo Gas
+                                </div>
+                                <div class="fs-5 fw-bold text-dark">
+                                    ${{ user.saldo_favor_gas|floatformat:2 }}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                {% endif %}
-                
                 <div class="card mb-3 shadow-sm">
                     <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                         <span class="fw-bold">💰 Mi Estado de Cuenta</span>
@@ -380,6 +397,15 @@
             <div class="mb-3">
                 <label class="form-label fw-bold">Monto Transferido ($)</label>
                 <input type="number" step="0.01" name="monto" class="form-control" placeholder="0.00" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Concepto del Pago</label>
+                <select name="tipo_pago" class="form-select">
+                    <option value="MANTENIMIENTO">Cuota / Mantenimiento</option>
+                    <option value="GAS">Consumo de Gas</option>
+                    <option value="OTRO">Otro</option>
+                </select>
             </div>
             
             <div class="mb-3">
