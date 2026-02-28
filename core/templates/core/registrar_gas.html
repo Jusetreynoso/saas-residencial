@@ -5,6 +5,11 @@
     <title>Registro de Gas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        /* Ajuste para que la tabla pequeña se vea bien */
+        .tabla-historial th { font-size: 0.85rem; background-color: #343a40; color: white; }
+        .tabla-historial td { font-size: 0.9rem; vertical-align: middle; }
+    </style>
 </head>
 <body class="bg-light">
 
@@ -26,13 +31,13 @@
     {% endif %}
 
     <div class="row">
-        <div class="col-md-5 mb-4">
-            <form method="post" class="card card-body shadow border-warning border-top-0 border-end-0 border-bottom-0 border-3">
+        <div class="col-md-4 mb-4">
+            <form method="post" class="card card-body shadow border-warning border-top-0 border-end-0 border-bottom-0 border-3 sticky-top" style="top: 20px; z-index: 1;">
                 {% csrf_token %}
                 <h5 class="card-title mb-3">📝 Nueva Factura</h5>
 
                 <div class="mb-3">
-                    <label class="fw-bold">Apartamento a Facturar</label>
+                    <label class="fw-bold">Apartamento</label>
                     {{ form.apartamento }}
                 </div>
 
@@ -42,11 +47,11 @@
                 </div>
 
                 <div class="row mb-3">
-                    <div class="col-6">
+                    <div class="col-12 mb-2">
                         <label class="fw-bold">Fecha Lectura</label>
                         {{ form.fecha_lectura }}
                     </div>
-                    <div class="col-6">
+                    <div class="col-12">
                         <label class="fw-bold text-primary">Lectura Actual</label>
                         {{ form.lectura_actual }}
                     </div>
@@ -63,35 +68,53 @@
             </form>
         </div>
 
-        <div class="col-md-7">
+        <div class="col-md-8">
             <div class="card shadow">
-                <div class="card-header bg-dark text-white">
-                    📊 Estado Actual de Medidores
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <span>📊 Últimas Lecturas Registradas</span>
+                    <span class="badge bg-secondary">Historial</span>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 align-middle">
-                        <thead class="table-secondary">
+                    <table class="table table-hover table-bordered mb-0 align-middle tabla-historial text-center">
+                        <thead>
                             <tr>
-                                <th>Apto</th>
-                                <th>Última Lectura</th>
-                                <th>Fecha Corte</th>
-                                <th>Estado</th>
+                                <th style="width: 10%;">Apto</th>
+                                <th style="width: 15%;">Fecha</th>
+                                <th>Ant.</th>
+                                <th>Act.</th>
+                                <th class="bg-primary text-white">Galones</th>
+                                <th class="bg-success text-white">Total ($)</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for item in estado_medidores %}
                             <tr>
-                                <td class="fw-bold">{{ item.apto }}</td>
+                                <td class="fw-bold bg-light">{{ item.apto }}</td>
+                                <td class="text-muted small">{{ item.ultima_fecha }}</td>
+                                
+                                <td>{{ item.lectura_anterior|floatformat:3 }}</td>
                                 <td>{{ item.lectura_actual|floatformat:3 }}</td>
-                                <td class="small text-muted">{{ item.ultima_fecha }}</td>
-                                <td>
-                                    <span class="badge bg-secondary">Historial</span>
+                                
+                                <td class="fw-bold text-primary bg-light">
+                                    {{ item.galones|floatformat:2 }} gls
                                 </td>
+                                
+                                <td class="fw-bold text-success">
+                                    ${{ item.total|floatformat:2 }}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-muted py-3">No hay lecturas registradas aún.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+            </div>
+            
+            <div class="alert alert-info mt-3 small">
+                <i class="bi bi-info-circle"></i> <strong>Nota:</strong> Esta tabla muestra la última lectura registrada de cada apartamento para referencia rápida.
             </div>
         </div>
     </div>
@@ -101,28 +124,23 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // 1. Convertimos la lista de Python a un objeto de JavaScript
-        // Mapa: { ID_APARTAMENTO : ULTIMA_LECTURA }
+        // Mapa: { ID_APARTAMENTO : ULTIMA_LECTURA_ACTUAL }
+        // Nota: Usamos 'lectura_actual' del historial porque esa se convierte en la 'anterior' del nuevo mes.
         const historialLecturas = {
             {% for item in estado_medidores %}
                 "{{ item.id }}": {{ item.lectura_actual|stringformat:".3f" }},
             {% endfor %}
         };
 
-        // 2. Referencias a los campos del formulario
         const selectApto = document.getElementById('id_apartamento');
         const inputAnterior = document.getElementById('id_lectura_anterior');
 
-        // 3. Escuchar cuando cambies el apartamento
         if (selectApto && inputAnterior) {
             selectApto.addEventListener('change', function() {
                 const idSeleccionado = this.value;
-                
                 if (historialLecturas[idSeleccionado] !== undefined) {
-                    // Si existe historial, llenamos el campo
                     inputAnterior.value = historialLecturas[idSeleccionado];
                 } else {
-                    // Si es nuevo o no hay datos, ponemos 0
                     inputAnterior.value = 0;
                 }
             });

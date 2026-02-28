@@ -280,7 +280,7 @@ def registrar_lectura_gas(request):
                             saldo_pendiente=lectura.total_a_pagar # Inicialmente debe todo
                         )
                         
-                        # 4. LÓGICA AUTOMÁTICA DE SALDO A FAVOR
+                        # 4. LÓGICA AUTOMÁTICA DE SALDO A FAVOR (INTACTA)
                         msg_extra = ""
                         if residente.saldo_a_favor > 0:
                             # CASO A: El saldo cubre toda la factura
@@ -319,21 +319,31 @@ def registrar_lectura_gas(request):
         precio = ultima_general.precio_galon_mes if ultima_general else 0.00
         form = LecturaGasForm(request.user, initial={'precio_galon_mes': precio})
 
-    # --- AQUÍ ESTÁ EL CAMBIO CLAVE PARA EL SCRIPT DE AUTO-LLENADO ---
+    # --- ZONA EDITADA: Preparación de datos para la Tabla y el Script ---
     apartamentos = Apartamento.objects.filter(residencial=request.user.residencial).order_by('numero')
     estado_medidores = []
 
     for apt in apartamentos:
         ultima = LecturaGas.objects.filter(apartamento=apt).order_by('-fecha_lectura').first()
+        
         datos = {
-            'id': apt.id,   # <--- ¡ESTA ES LA LÍNEA NUEVA NECESARIA!
+            'id': apt.id,   # NECESARIO para el script de auto-llenado
             'apto': apt.numero,
             'ultima_fecha': ultima.fecha_lectura if ultima else "---",
-            'lectura_anterior': ultima.lectura_anterior if ultima else 0.0,
-            'lectura_actual': ultima.lectura_actual if ultima else 0.0,
-            'consumo': (ultima.lectura_actual - ultima.lectura_anterior) if ultima else 0.0,
-            'precio': ultima.precio_galon_mes if ultima else 0.0,
-            'total': ultima.total_a_pagar if ultima else 0.0,
+            
+            # Datos de Lecturas (para ver en tabla y script)
+            'lectura_anterior': ultima.lectura_anterior if ultima else 0.000,
+            'lectura_actual': ultima.lectura_actual if ultima else 0.000,
+            
+            # Diferencia en m3 (Dato informativo)
+            'consumo': (ultima.lectura_actual - ultima.lectura_anterior) if ultima else 0.00,
+            
+            # Galones reales facturados (NECESARIO para la columna nueva de la tabla)
+            'galones': ultima.consumo_galones if ultima else 0.00,
+            
+            # Dinero
+            'precio': ultima.precio_galon_mes if ultima else 0.00,
+            'total': ultima.total_a_pagar if ultima else 0.00,
         }
         estado_medidores.append(datos)
 
