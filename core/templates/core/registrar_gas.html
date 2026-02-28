@@ -2,20 +2,23 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Registrar Gas</title>
+    <title>Registro de Gas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 </head>
 <body class="bg-light">
 
-<div class="container mt-5 mb-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>🔥 Facturación de Gas</h2>
-        <a href="{% url 'dashboard' %}" class="btn btn-secondary">Volver al Dashboard</a>
+<nav class="navbar navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">⬅️ Volver al Dashboard</a>
     </div>
+</nav>
+
+<div class="container pb-5">
 
     {% if messages %}
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
@@ -23,102 +26,109 @@
     {% endif %}
 
     <div class="row">
-        
-        <div class="col-md-8 mb-4">
-            <div class="card shadow border-info">
-                <div class="card-header bg-info text-white fw-bold">
-                    📊 Estado Actual de Medidores
+        <div class="col-md-5 mb-4">
+            <form method="post" class="card card-body shadow border-warning border-top-0 border-end-0 border-bottom-0 border-3">
+                {% csrf_token %}
+                <h5 class="card-title mb-3">📝 Nueva Factura</h5>
+
+                <div class="mb-3">
+                    <label class="fw-bold">Apartamento a Facturar</label>
+                    {{ form.apartamento }}
                 </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover mb-0 text-center">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Apto</th>
-                                    <th>Fecha Últ.</th>
-                                    <th>Lect. Anterior</th>
-                                    <th class="bg-warning bg-opacity-25">Lect. Actual</th>
-                                    <th>Consumo</th>
-                                    <th>Total ($)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in estado_medidores %}
-                                <tr>
-                                    <td class="fw-bold">{{ item.apto }}</td>
-                                    <td>
-                                        {% if item.ultima_fecha != "---" %}
-                                            {{ item.ultima_fecha|date:"d/m/y" }}
-                                        {% else %}
-                                            <span class="badge bg-secondary">Nuevo</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-muted">{{ item.lectura_anterior }}</td>
-                                    
-                                    <td class="fw-bold fs-5 bg-warning bg-opacity-10 text-dark">
-                                        {{ item.lectura_actual }}
-                                    </td>
-                                    
-                                    <td>{{ item.consumo|floatformat:2 }}</td>
-                                    <td class="fw-bold text-success">${{ item.total }}</td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="6" class="p-3">No hay lecturas previas.</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+
+                <div class="mb-3">
+                    <label class="fw-bold">Lectura Anterior</label>
+                    {{ form.lectura_anterior }}
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="fw-bold">Fecha Lectura</label>
+                        {{ form.fecha_lectura }}
+                    </div>
+                    <div class="col-6">
+                        <label class="fw-bold text-primary">Lectura Actual</label>
+                        {{ form.lectura_actual }}
                     </div>
                 </div>
-                <div class="card-footer bg-white small text-muted">
-                    💡 Mira la columna <strong>"Lect. Actual"</strong> y escribe ese número en el formulario de la derecha como "Lectura Anterior".
+
+                <div class="mb-3">
+                    <label class="fw-bold">Precio Galón ($)</label>
+                    {{ form.precio_galon_mes }}
+                </div>
+
+                <button type="submit" class="btn btn-warning fw-bold w-100">
+                    💾 Guardar y Facturar
+                </button>
+            </form>
+        </div>
+
+        <div class="col-md-7">
+            <div class="card shadow">
+                <div class="card-header bg-dark text-white">
+                    📊 Estado Actual de Medidores
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th>Apto</th>
+                                <th>Última Lectura</th>
+                                <th>Fecha Corte</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in estado_medidores %}
+                            <tr>
+                                <td class="fw-bold">{{ item.apto }}</td>
+                                <td>{{ item.lectura_actual|floatformat:3 }}</td>
+                                <td class="small text-muted">{{ item.ultima_fecha }}</td>
+                                <td>
+                                    <span class="badge bg-secondary">Historial</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-4">
-            <div class="card shadow border-warning sticky-top" style="top: 20px; z-index: 1;">
-                <div class="card-header bg-warning text-dark fw-bold">
-                    📝 Nueva Factura
-                </div>
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-                        
-                        <div class="mb-3">
-                            <label class="fw-bold">Apartamento a Facturar</label>
-                            {{ form.apartamento }}
-                        </div>
-
-                        <div class="row">
-                            <div class="col-6 mb-3">
-                                <label class="fw-bold text-muted small">Lectura Anterior</label>
-                                {{ form.lectura_anterior }}
-                            </div>
-                            <div class="col-6 mb-3">
-                                <label class="fw-bold text-primary">Lectura Actual</label>
-                                {{ form.lectura_actual }}
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="fw-bold">Precio Galón ($)</label>
-                            {{ form.precio_galon_mes }}
-                        </div>
-
-                        <button type="submit" class="btn btn-warning w-100 fw-bold btn-lg">
-                            💾 Guardar y Facturar
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. Convertimos la lista de Python a un objeto de JavaScript
+        // Mapa: { ID_APARTAMENTO : ULTIMA_LECTURA }
+        const historialLecturas = {
+            {% for item in estado_medidores %}
+                "{{ item.id }}": {{ item.lectura_actual|stringformat:".3f" }},
+            {% endfor %}
+        };
+
+        // 2. Referencias a los campos del formulario
+        const selectApto = document.getElementById('id_apartamento');
+        const inputAnterior = document.getElementById('id_lectura_anterior');
+
+        // 3. Escuchar cuando cambies el apartamento
+        if (selectApto && inputAnterior) {
+            selectApto.addEventListener('change', function() {
+                const idSeleccionado = this.value;
+                
+                if (historialLecturas[idSeleccionado] !== undefined) {
+                    // Si existe historial, llenamos el campo
+                    inputAnterior.value = historialLecturas[idSeleccionado];
+                } else {
+                    // Si es nuevo o no hay datos, ponemos 0
+                    inputAnterior.value = 0;
+                }
+            });
+        }
+    });
+</script>
 
 </body>
 </html>

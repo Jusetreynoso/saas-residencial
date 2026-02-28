@@ -242,6 +242,7 @@ def registrar_lectura_gas(request):
             mes_actual = timezone.now().month
             anio_actual = timezone.now().year
             
+            # 1. Validar que no exista lectura este mes
             existe = LecturaGas.objects.filter(
                 residencial=request.user.residencial,
                 apartamento=apartamento,
@@ -255,9 +256,11 @@ def registrar_lectura_gas(request):
                 lectura = form.save(commit=False)
                 lectura.residencial = request.user.residencial
                 
+                # 2. Validar consistencia de lectura
                 if lectura.lectura_actual < lectura.lectura_anterior:
                     messages.error(request, "⛔ Error: La lectura actual es menor a la anterior.")
                 else:
+                    # Guardamos la lectura (El modelo calcula totales en su método save)
                     lectura.save() 
                     
                     residente = lectura.apartamento.habitantes.first()
@@ -265,7 +268,7 @@ def registrar_lectura_gas(request):
                     if residente:
                         consumo = lectura.lectura_actual - lectura.lectura_anterior
                         
-                        # 1. Crear la factura (Nace PENDIENTE por defecto)
+                        # 3. Crear la factura (Nace PENDIENTE por defecto)
                         nueva_factura = Factura.objects.create(
                             residencial=request.user.residencial,
                             usuario=residente,
@@ -277,7 +280,7 @@ def registrar_lectura_gas(request):
                             saldo_pendiente=lectura.total_a_pagar # Inicialmente debe todo
                         )
                         
-                        # --- LÓGICA AUTOMÁTICA DE SALDO A FAVOR (NUEVO) ---
+                        # 4. LÓGICA AUTOMÁTICA DE SALDO A FAVOR
                         msg_extra = ""
                         if residente.saldo_a_favor > 0:
                             # CASO A: El saldo cubre toda la factura
@@ -295,14 +298,13 @@ def registrar_lectura_gas(request):
                                 residente.saldo_a_favor = 0 # Se gasta todo
                                 nueva_factura.monto_pagado = abono
                                 nueva_factura.saldo_pendiente = nueva_factura.monto - abono
-                                # Sigue PENDIENTE, pero debe menos
                                 msg_extra = f" (💰 Se descontaron ${abono} de su saldo)"
         
-                            # Guardamos los cambios
+                            # Guardamos los cambios de saldo
                             residente.save()
                             nueva_factura.save()
-                        # --------------------------------------------------
 
+                        # Vinculamos factura a lectura
                         lectura.factura_generada = nueva_factura
                         lectura.save()
                         
@@ -312,16 +314,19 @@ def registrar_lectura_gas(request):
                 
             return redirect('registrar_lectura_gas')
     else:
+        # GET: Mostrar formulario vacío
         ultima_general = LecturaGas.objects.filter(residencial=request.user.residencial).last()
         precio = ultima_general.precio_galon_mes if ultima_general else 0.00
         form = LecturaGasForm(request.user, initial={'precio_galon_mes': precio})
 
+    # --- AQUÍ ESTÁ EL CAMBIO CLAVE PARA EL SCRIPT DE AUTO-LLENADO ---
     apartamentos = Apartamento.objects.filter(residencial=request.user.residencial).order_by('numero')
     estado_medidores = []
 
     for apt in apartamentos:
         ultima = LecturaGas.objects.filter(apartamento=apt).order_by('-fecha_lectura').first()
         datos = {
+            'id': apt.id,   # <--- ¡ESTA ES LA LÍNEA NUEVA NECESARIA!
             'apto': apt.numero,
             'ultima_fecha': ultima.fecha_lectura if ultima else "---",
             'lectura_anterior': ultima.lectura_anterior if ultima else 0.0,
