@@ -53,15 +53,26 @@ def dashboard(request):
         context['mi_residencial'] = user.residencial
         context['avisos'] = Aviso.objects.filter(residencial=user.residencial).order_by('-fecha_creacion')[:3]
         
+        # --- ZONA DE ADMINISTRADOR ---
         if user.rol in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+            # A. Solicitudes Pendientes (Ya lo tenías)
             context['solicitudes_pendientes'] = Reserva.objects.filter(
                 residencial=user.residencial, 
                 estado='PENDIENTE'
             ).order_by('fecha_solicitud')
 
+            # B. --- NUEVO: Reservas Aprobadas Futuras (Para poder cancelar) ---
+            # Buscamos reservas aprobadas desde hoy en adelante
+            context['reservas_futuras'] = Reserva.objects.filter(
+                residencial=user.residencial,
+                estado='APROBADA',
+                fecha_solicitud__gte=timezone.now().date()
+            ).order_by('fecha_solicitud')
+
         if user.apartamento:
             context['mi_apartamento'] = user.apartamento
         
+        # Reservas PERSONALES (Lo que el usuario ve en "Mis Reservas")
         context['mis_reservas'] = Reserva.objects.filter(usuario=user).order_by('-fecha_solicitud')
 
         # MÓDULO DE FINANZAS
