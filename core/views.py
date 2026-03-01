@@ -962,22 +962,19 @@ def registrar_abono(request):
     if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
         return redirect('dashboard')
 
+    # LÓGICA CUANDO SE ENVÍAN DATOS (POST)
     if request.method == 'POST':
-        # Nota: Usamos request.POST directo porque el form lo definimos manual en el HTML
         usuario_id = request.POST.get('usuario')
         monto = Decimal(request.POST.get('monto'))
         concepto = request.POST.get('concepto')
-        
-        # AQUÍ RECIBIMOS EL DATO OCULTO
         tipo_pago = request.POST.get('tipo_pago') # 'GAS' o 'MANTENIMIENTO'
 
         vecino = get_object_or_404(Usuario, pk=usuario_id)
         monto_disponible = monto
 
-        # 1. DETERMINAR QUÉ PAGAR (Automático según el botón que presionaste)
+        # 1. INTENTAR PAGAR DEUDAS EXISTENTES PRIMERO
         filtro_tipo = 'GAS' if tipo_pago == 'GAS' else 'CUOTA'
         
-        # Buscamos facturas pendientes DE ESE TIPO
         facturas_pendientes = Factura.objects.filter(
             usuario=vecino,
             estado='PENDIENTE',
@@ -986,7 +983,6 @@ def registrar_abono(request):
 
         facturas_pagadas_count = 0
 
-        # 2. ALGORITMO MATA-DEUDAS
         for factura in facturas_pendientes:
             if monto_disponible <= 0: break
 
@@ -1006,26 +1002,34 @@ def registrar_abono(request):
                 monto_disponible = 0
                 factura.save()
 
-        # 3. SI SOBRA DINERO -> A SU BOLSILLO CORRESPONDIENTE
-        # (Aquí es donde daba el error 500 antes)
+        # 2. EL SOBRANTE (O EL TOTAL SI NO HABÍA DEUDA) VA AL SALDO A FAVOR
         msg_extra = ""
         if monto_disponible > 0:
             if tipo_pago == 'GAS':
-                vecino.saldo_favor_gas += monto_disponible # Bolsillo Gas
+                vecino.saldo_favor_gas += monto_disponible
                 bolsillo = "Gas"
             else:
-                vecino.saldo_favor_mantenimiento += monto_disponible # Bolsillo Mantenimiento
+                vecino.saldo_favor_mantenimiento += monto_disponible
                 bolsillo = "Mantenimiento"
             
             vecino.save()
-            msg_extra = f"y sobraron ${monto_disponible} al saldo de {bolsillo}."
+            msg_extra = f"y se abonaron ${monto_disponible} al saldo de {bolsillo}."
         else:
             msg_extra = "cubriendo deuda pendiente."
 
-        messages.success(request, f"✅ Cobro registrado. Se pagaron {facturas_pagadas_count} facturas {msg_extra}")
-        return redirect('cuentas_por_cobrar') # O donde quieras redirigir
+        messages.success(request, f"✅ Abono registrado a {vecino}. Se pagaron {facturas_pagadas_count} facturas {msg_extra}")
+        
+        # Si venía del modal de cuentas por cobrar, volvemos allí. Si no, al dashboard.
+        if 'next' in request.POST:
+             return redirect(request.POST.get('next'))
+        return redirect('cuentas_por_cobrar')
 
-    return redirect('cuentas_por_cobrar')
+    # LÓGICA CUANDO ENTRAS A LA PANTALLA (GET)
+    else:
+        # Usamos el formulario para facilitar la lista de vecinos
+        form = AbonoForm(request.user)
+        
+    return render(request, 'core/registrar_abono.html', {'form': form})
 
 
 # 1. VISTA PARA EL VECINO (SUBIR PAGO)
