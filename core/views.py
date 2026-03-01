@@ -379,20 +379,21 @@ def generar_cuotas_masivas(request):
                     saldo_pendiente=apto.monto_cuota # Inicialmente debe todo
                 )
                 
-                # 2. LÓGICA AUTOMÁTICA DE SALDO A FAVOR
-                if dueno.saldo_a_favor > 0:
-                    # CASO A: El saldo cubre toda la factura (Ej: Tiene 5000, factura 3000)
-                    if dueno.saldo_a_favor >= nueva_factura.monto:
-                        dueno.saldo_a_favor -= nueva_factura.monto
+                # 2. LÓGICA AUTOMÁTICA DE SALDO A FAVOR (CORREGIDA: SOLO MANTENIMIENTO)
+                if dueno.saldo_favor_mantenimiento > 0:
+                    
+                    # CASO A: El saldo cubre toda la factura
+                    if dueno.saldo_favor_mantenimiento >= nueva_factura.monto:
+                        dueno.saldo_favor_mantenimiento -= nueva_factura.monto
                         nueva_factura.monto_pagado = nueva_factura.monto
                         nueva_factura.saldo_pendiente = 0
                         nueva_factura.estado = 'PAGADO'
                         nueva_factura.fecha_pago = timezone.now().date()
                         
-                    # CASO B: El saldo es menor a la factura (Ej: Tiene 100, factura 3000)
+                    # CASO B: El saldo es menor a la factura (Abono parcial)
                     else:
-                        abono = dueno.saldo_a_favor
-                        dueno.saldo_a_favor = 0 # Se gastó todo su saldo
+                        abono = dueno.saldo_favor_mantenimiento
+                        dueno.saldo_favor_mantenimiento = 0 # Se gastó todo su saldo de mantenimiento
                         nueva_factura.monto_pagado = abono
                         nueva_factura.saldo_pendiente = nueva_factura.monto - abono
                         # Sigue en estado PENDIENTE, pero con menos deuda
@@ -404,7 +405,7 @@ def generar_cuotas_masivas(request):
                 contador += 1
     
     if contador > 0:
-        messages.success(request, f"✅ Se generaron {contador} facturas (aplicando saldos a favor automáticamente).")
+        messages.success(request, f"✅ Se generaron {contador} facturas (aplicando saldos de mantenimiento automáticamente).")
     else:
         messages.info(request, "ℹ️ No se generaron facturas nuevas.")
         
@@ -441,39 +442,48 @@ def registrar_pago(request, factura_id):
             messages.error(request, "⚠️ El monto debe ser mayor a 0.")
             return redirect('cuentas_por_cobrar')
 
-        deuda_actual = factura.monto - (factura.monto_pagado or 0)
+        # Calculamos cuánto falta por pagar realmente
+        deuda_actual = factura.saldo_pendiente if factura.saldo_pendiente is not None else factura.monto
         
-        # 1. Registramos el pago en la factura
+        # 1. Registramos el pago acumulado
         factura.monto_pagado = (factura.monto_pagado or 0) + monto_recibido
-        factura.fecha_pago = timezone.now().date()
-
-        # CASO A: Pagó la deuda completa o de más
+        
+        # CASO A: Pagó la deuda completa (o pagó de más)
         if monto_recibido >= deuda_actual:
             factura.estado = 'PAGADO'
             factura.saldo_pendiente = 0
+            factura.fecha_pago = timezone.now().date()
             
+            # Calculamos si sobró dinero
             sobrante = monto_recibido - deuda_actual
             
             if sobrante > 0:
                 vecino = factura.usuario
                 
-                # --- CORRECCIÓN DE SEGURIDAD ---
-                # Si el campo está vacío (None), lo convertimos a 0 antes de sumar
-                saldo_actual = vecino.saldo_a_favor if vecino.saldo_a_favor is not None else Decimal(0)
-                vecino.saldo_a_favor = saldo_actual + sobrante
-                # -------------------------------
+                # --- CORRECCIÓN CLAVE: DETECTAMOS EL BOLSILLO AUTOMÁTICAMENTE ---
+                bolsillo_nombre = ""
                 
-                vecino.save() # Guardamos en la Base de Datos
+                if factura.tipo == 'GAS':
+                    # Si la factura era de Gas, el vuelto va al saldo de Gas
+                    saldo_actual = vecino.saldo_favor_gas or Decimal(0)
+                    vecino.saldo_favor_gas = saldo_actual + sobrante
+                    bolsillo_nombre = "Gas"
+                else:
+                    # Si era Cuota o Mantenimiento, va al saldo de Mantenimiento
+                    saldo_actual = vecino.saldo_favor_mantenimiento or Decimal(0)
+                    vecino.saldo_favor_mantenimiento = saldo_actual + sobrante
+                    bolsillo_nombre = "Mantenimiento"
                 
-                messages.success(request, f"✅ Pagado. Se abonaron ${sobrante:,.2f} al saldo a favor de {vecino.first_name}.")
+                vecino.save() # Guardamos el saldo en el vecino
+                
+                messages.success(request, f"✅ Pagado. Se abonaron ${sobrante:,.2f} al saldo de {bolsillo_nombre} de {vecino.first_name}.")
             else:
                 messages.success(request, f"✅ Factura pagada correctamente (Exacto).")
 
         # CASO B: Pago Parcial (Abono)
         else:
             factura.saldo_pendiente = deuda_actual - monto_recibido
-            # IMPORTANTE: Si es pago parcial, el estado sigue siendo PENDIENTE
-            # (Opcional: podrías ponerle un estado 'PARCIAL' si quisieras)
+            # Si es parcial, no tocamos fechas de pago final ni estados de pagado
             messages.warning(request, f"💰 Abono registrado. Restan por pagar: ${factura.saldo_pendiente:,.2f}")
 
         factura.save()
@@ -953,40 +963,69 @@ def registrar_abono(request):
         return redirect('dashboard')
 
     if request.method == 'POST':
-        form = AbonoForm(request.user, request.POST)
-        if form.is_valid():
-            vecino = form.cleaned_data['usuario']
-            monto = form.cleaned_data['monto']
-            concepto = form.cleaned_data['concepto']
+        # Nota: Usamos request.POST directo porque el form lo definimos manual en el HTML
+        usuario_id = request.POST.get('usuario')
+        monto = Decimal(request.POST.get('monto'))
+        concepto = request.POST.get('concepto')
+        
+        # AQUÍ RECIBIMOS EL DATO OCULTO
+        tipo_pago = request.POST.get('tipo_pago') # 'GAS' o 'MANTENIMIENTO'
 
-            # 1. Aumentamos el Saldo a Favor REAL del vecino
-            # (Usamos 'or 0' por seguridad si el campo está vacío)
-            saldo_actual = vecino.saldo_a_favor if vecino.saldo_a_favor else Decimal(0)
-            vecino.saldo_a_favor = saldo_actual + monto
+        vecino = get_object_or_404(Usuario, pk=usuario_id)
+        monto_disponible = monto
+
+        # 1. DETERMINAR QUÉ PAGAR (Automático según el botón que presionaste)
+        filtro_tipo = 'GAS' if tipo_pago == 'GAS' else 'CUOTA'
+        
+        # Buscamos facturas pendientes DE ESE TIPO
+        facturas_pendientes = Factura.objects.filter(
+            usuario=vecino,
+            estado='PENDIENTE',
+            tipo=filtro_tipo
+        ).order_by('fecha_vencimiento')
+
+        facturas_pagadas_count = 0
+
+        # 2. ALGORITMO MATA-DEUDAS
+        for factura in facturas_pendientes:
+            if monto_disponible <= 0: break
+
+            deuda = factura.saldo_pendiente
+            
+            if monto_disponible >= deuda:
+                monto_disponible -= deuda
+                factura.saldo_pendiente = 0
+                factura.monto_pagado = factura.monto
+                factura.estado = 'PAGADO'
+                factura.fecha_pago = timezone.now().date()
+                factura.save()
+                facturas_pagadas_count += 1
+            else:
+                factura.saldo_pendiente -= monto_disponible
+                factura.monto_pagado += monto_disponible
+                monto_disponible = 0
+                factura.save()
+
+        # 3. SI SOBRA DINERO -> A SU BOLSILLO CORRESPONDIENTE
+        # (Aquí es donde daba el error 500 antes)
+        msg_extra = ""
+        if monto_disponible > 0:
+            if tipo_pago == 'GAS':
+                vecino.saldo_favor_gas += monto_disponible # Bolsillo Gas
+                bolsillo = "Gas"
+            else:
+                vecino.saldo_favor_mantenimiento += monto_disponible # Bolsillo Mantenimiento
+                bolsillo = "Mantenimiento"
+            
             vecino.save()
+            msg_extra = f"y sobraron ${monto_disponible} al saldo de {bolsillo}."
+        else:
+            msg_extra = "cubriendo deuda pendiente."
 
-            # 2. Creamos un registro "Factura Pagada" para el historial
-            # Esto sirve para que el vecino vea en su estado de cuenta que pagó ese dinero
-            Factura.objects.create(
-                residencial=request.user.residencial,
-                usuario=vecino,
-                tipo='OTRO', # Usamos 'OTRO' para diferenciarlo de cuotas normales
-                concepto=f"🟢 ABONO: {concepto}",
-                monto=monto,
-                monto_pagado=monto,
-                estado='PAGADO', # Nace pagada
-                fecha_emision=timezone.now().date(),
-                fecha_vencimiento=timezone.now().date(),
-                fecha_pago=timezone.now().date(),
-                saldo_pendiente=0
-            )
+        messages.success(request, f"✅ Cobro registrado. Se pagaron {facturas_pagadas_count} facturas {msg_extra}")
+        return redirect('cuentas_por_cobrar') # O donde quieras redirigir
 
-            messages.success(request, f"✅ Abono de ${monto} registrado exitosamente para {vecino.first_name}. Nuevo saldo a favor: ${vecino.saldo_a_favor}")
-            return redirect('cuentas_por_cobrar')
-    else:
-        form = AbonoForm(request.user)
-
-    return render(request, 'core/registrar_abono.html', {'form': form})
+    return redirect('cuentas_por_cobrar')
 
 
 # 1. VISTA PARA EL VECINO (SUBIR PAGO)

@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <title>Cuentas por Cobrar</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 </head>
 <body class="bg-light">
 
-<div class="container mt-5">
+<div class="container mt-5 mb-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-0">💸 Cuentas por Cobrar</h2>
@@ -93,59 +94,20 @@
                             </td>
 
                             <td class="text-end">
-                                <button type="button" class="btn btn-success btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalPago{{ factura.id }}">
-                                    💲 Registrar Pago
+                                <button type="button" 
+                                        class="btn btn-success btn-sm fw-bold" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#modalRegistrarPago"
+                                        data-monto="{{ factura.saldo_pendiente|stringformat:'.2f' }}"
+                                        data-usuario="{{ factura.usuario.id }}"
+                                        data-nombre="{{ factura.usuario.first_name }} {{ factura.usuario.last_name }}"
+                                        data-concepto="{{ factura.concepto }}"
+                                        
+                                        /* AQUÍ ESTÁ LA MAGIA: Define el tipo automáticamente */
+                                        data-tipo="{% if factura.tipo == 'GAS' %}GAS{% else %}MANTENIMIENTO{% endif %}">
+                                    <i class="bi bi-cash"></i> 💲 Registrar Pago
                                 </button>
-
-                                <div class="modal fade text-start" id="modalPago{{ factura.id }}" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <form method="POST" action="{% url 'registrar_pago' factura.id %}">
-                                                {% csrf_token %}
-                                                
-                                                <div class="modal-header bg-success text-white">
-                                                    <h5 class="modal-title">Cobrar a {{ factura.usuario.first_name }}</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                </div>
-                                                
-                                                <div class="modal-body">
-                                                    <div class="alert alert-light border">
-                                                        <p class="mb-1"><strong>Concepto:</strong> {{ factura.concepto }}</p>
-                                                        <p class="mb-1"><strong>Total Factura:</strong> ${{ factura.monto }}</p>
-                                                        <h5 class="text-danger mt-2">
-                                                            <strong>Deuda Actual: ${{ factura.saldo_pendiente|default:factura.monto }}</strong>
-                                                        </h5>
-                                                    </div>
-                                                    
-                                                    <hr>
-                                                    
-                                                    <div class="mb-3">
-                                                        <label for="montoInput{{ factura.id }}" class="form-label fw-bold">¿Cuánto dinero recibiste?</label>
-                                                        <div class="input-group">
-                                                            <span class="input-group-text">$</span>
-                                                            <input type="number" step="0.01" class="form-control form-control-lg" 
-                                                                   name="monto_pagado" id="montoInput{{ factura.id }}"
-                                                                   required placeholder="Ej: 500.00" min="1">
-                                                        </div>
-                                                        <div class="form-text mt-2">
-                                                            <ul>
-                                                                <li>Si ingresas MENOS, se registra como abono.</li>
-                                                                <li>Si ingresas EL TOTAL, se marca como pagado.</li>
-                                                                <li>Si ingresas MÁS, el sistema te avisará el saldo a favor.</li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                    <button type="submit" class="btn btn-success fw-bold">Confirmar Cobro</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                                </td>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
@@ -164,7 +126,78 @@
     </div>
 </div>
 
+<div class="modal fade" id="modalRegistrarPago" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">💰 Registrar Cobro</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form action="{% url 'registrar_abono' %}" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    
+                    <input type="hidden" name="usuario" id="inputUsuario">
+                    <input type="hidden" name="tipo_pago" id="inputTipoPago"> <div class="alert alert-light border">
+                        <p class="mb-1"><strong>Cobrar a:</strong> <span id="spanNombre"></span></p>
+                        <p class="mb-0"><strong>Ref:</strong> <span id="spanConcepto"></span></p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="fw-bold">Monto Recibido</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="0.01" name="monto" id="inputMonto" class="form-control form-control-lg" required>
+                        </div>
+                        <div class="form-text mt-2 text-muted small">
+                            <i class="bi bi-info-circle"></i> El pago se aplicará automáticamente a la deuda seleccionada y el sobrante irá al saldo a favor correspondiente.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="fw-bold">Nota (Opcional)</label>
+                        <input type="text" name="concepto" class="form-control" value="Pago de factura pendiente">
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-bold">Confirmar Cobro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var modalPago = document.getElementById('modalRegistrarPago');
+        
+        modalPago.addEventListener('show.bs.modal', function (event) {
+            // 1. Detectar qué botón se presionó
+            var button = event.relatedTarget;
+            
+            // 2. Extraer datos del botón
+            var monto = button.getAttribute('data-monto');
+            var usuarioId = button.getAttribute('data-usuario');
+            var tipoFactura = button.getAttribute('data-tipo'); // 'GAS' o 'MANTENIMIENTO'
+            var nombre = button.getAttribute('data-nombre');
+            var concepto = button.getAttribute('data-concepto');
+
+            // 3. Llenar el formulario automáticamente
+            document.getElementById('inputMonto').value = monto;
+            document.getElementById('inputUsuario').value = usuarioId;
+            document.getElementById('inputTipoPago').value = tipoFactura; // Llenamos el oculto
+            
+            // 4. Mostrar información visual al usuario
+            document.getElementById('spanNombre').textContent = nombre;
+            document.getElementById('spanConcepto').textContent = concepto;
+        });
+    });
+</script>
 
 </body>
 </html>
