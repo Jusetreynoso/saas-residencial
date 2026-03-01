@@ -193,16 +193,42 @@ def api_eventos(request):
 
 @login_required
 def cancelar_reserva(request, reserva_id):
-    reserva = get_object_or_404(Reserva, pk=reserva_id, usuario=request.user)
-    
-    if reserva.estado in ['PENDIENTE', 'APROBADA']:
-        fecha = reserva.fecha_solicitud
-        area = reserva.area_social.nombre
-        reserva.delete()
-        messages.success(request, f'La reserva del {area} para el {fecha} ha sido cancelada correctamente.')
+    # 1. Buscamos la reserva
+    reserva = get_object_or_404(Reserva, pk=reserva_id)
+
+    # 2. Seguridad: Solo el dueño o el Admin pueden cancelar
+    es_admin = request.user.rol in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']
+    es_dueno = request.user == reserva.usuario
+
+    if not (es_dueno or es_admin):
+        messages.error(request, "No tienes permiso para cancelar esta reserva.")
+        return redirect('dashboard')
+
+    # Guardamos datos clave antes de borrarla (para el mensaje)
+    fecha_reserva = reserva.fecha_solicitud
+    nombre_area = reserva.area_social.nombre
+    estado_anterior = reserva.estado
+    usuario_reserva = reserva.usuario
+
+    # 3. Lógica de "Aviso al Admin"
+    # Si es el VECINO quien cancela una reserva que ya estaba APROBADA
+    if es_dueno and not es_admin and estado_anterior == 'APROBADA':
+        # Creamos una Incidencia automática para avisar al admin
+        Incidencia.objects.create(
+            residencial=request.user.residencial,
+            usuario=request.user,
+            titulo=f"⚠️ Cancelación Reserva: {nombre_area}",
+            descripcion=f"El vecino {usuario_reserva.first_name} {usuario_reserva.last_name} (Apto {usuario_reserva.apartamento.numero}) canceló su reserva aprobada para el día {fecha_reserva}. La fecha ha quedado libre.",
+            estado='PENDIENTE'
+        )
+        msg_extra = " Se ha notificado al administrador."
     else:
-        messages.error(request, 'No se puede cancelar esta reserva (ya fue rechazada o finalizada).')
-        
+        msg_extra = ""
+
+    # 4. Borramos la reserva (Liberamos el calendario)
+    reserva.delete()
+
+    messages.success(request, f"✅ Reserva para el {fecha_reserva} cancelada y liberada.{msg_extra}")
     return redirect('dashboard')
 
 @login_required
