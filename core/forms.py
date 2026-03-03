@@ -86,13 +86,17 @@ class LecturaGasForm(forms.ModelForm):
             'apartamento': forms.Select(attrs={'class': 'form-select'}),
             'fecha_lectura': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             
-            # NO EDITABLE (Solo lectura)
-            'lectura_anterior': forms.NumberInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            # CAMBIO: Se elimina 'readonly' para permitir edición manual si es necesario
+            'lectura_anterior': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.001',
+                'placeholder': '0.000'
+            }),
             
-            # AQUÍ EL CAMBIO PARA LOS 3 DECIMALES
+            # Permite 3 decimales (123.456)
             'lectura_actual': forms.NumberInput(attrs={
                 'class': 'form-control', 
-                'step': '0.001',   # <--- Permite 3 decimales (123.456)
+                'step': '0.001',   
                 'placeholder': '0.000'
             }),
             
@@ -112,12 +116,26 @@ class LecturaGasForm(forms.ModelForm):
     def __init__(self, user, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if user.residencial:
-            self.fields['apartamento'].queryset = Apartamento.objects.filter(residencial=user.residencial).order_by('numero')
+            self.fields['apartamento'].queryset = Apartamento.objects.filter(
+                residencial=user.residencial
+            ).order_by('numero')
             
             # Pre-llenar precio (Opcional)
             ultimo = LecturaGas.objects.filter(residencial=user.residencial).last()
             if ultimo:
                 self.fields['precio_galon_mes'].initial = ultimo.precio_galon_mes
+
+    # Validación para asegurar que la lectura no sea regresiva
+    def clean(self):
+        cleaned_data = super().clean()
+        lectura_anterior = cleaned_data.get("lectura_anterior")
+        lectura_actual = cleaned_data.get("lectura_actual")
+
+        if lectura_actual is not None and lectura_anterior is not None:
+            if lectura_actual < lectura_anterior:
+                self.add_error('lectura_actual', "La lectura actual no puede ser menor a la lectura anterior.")
+        
+        return cleaned_data
 
 # ==========================================
 # 3. FORMULARIO DE GASTOS
