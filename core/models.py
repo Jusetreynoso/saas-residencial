@@ -330,4 +330,4 @@ class IngresoExtraordinario(models.Model):
     comprobante = models.CharField(max_length=50, blank=True, null=True, help_text="No. de recibo físico")
 
     def __str__(self):
-        return f"{self.get_categoria_display()} - {self.Apartamento.nombre_o_numero}"
+        return f"{self.concepto_detalle} - {self.monto} (Apto {self.Apartamento.numero})"
