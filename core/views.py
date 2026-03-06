@@ -1230,9 +1230,11 @@ def registrar_ingreso_extraordinario(request):
     if request.method == 'POST':
         form = IngresoExtraForm(request.POST)
         if form.is_valid():
-            form.save()
+            ingreso = form.save(commit=False)
+            ingreso.residencial = request.user.residencial # Asignar el residencial
+            ingreso.save()
             messages.success(request, "¡Ingreso extraordinario registrado con éxito!")
-            return redirect('dashboard') # O a tu dashboard
+            return redirect('dashboard') # <--- DEBE DECIR DASHBOARD AQUÍ
     else:
         form = IngresoExtraForm()
     
