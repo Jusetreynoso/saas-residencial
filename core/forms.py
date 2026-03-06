@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta, datetime
 # IMPORTANTE: Agregamos Usuario a esta lista y quitamos la importación de 'auth.User'
-from .models import Reserva, AreaSocial, BloqueoFecha, LecturaGas, Apartamento, Gasto, Aviso, Usuario, Incidencia, ReportePago
+from .models import Reserva, AreaSocial, BloqueoFecha, LecturaGas, Apartamento, Gasto, Aviso, Usuario, Incidencia, ReportePago, IngresoExtraordinario
 
 # ==========================================
 # 1. FORMULARIO DE RESERVAS
@@ -271,4 +271,16 @@ class ReportePagoForm(forms.ModelForm):
             'tipo_pago': 'Concepto del Pago',
             'monto': 'Monto Pagado',
             'comprobante': 'Foto del Comprobante'
+        }
+
+class IngresoExtraForm(forms.ModelForm):
+    class Meta:
+        model = IngresoExtraordinario
+        fields = ['Apartamento', 'categoria', 'concepto_detalle', 'monto', 'comprobante']
+        widgets = {
+            'Apartamento': forms.Select(attrs={'class': 'form-control select2'}),
+            'categoria': forms.Select(attrs={'class': 'form-control'}),
+            'concepto_detalle': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Describa el motivo...'}),
+            'monto': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'comprobante': forms.TextInput(attrs={'class': 'form-control'}),
         }

@@ -22,10 +22,11 @@ from .forms import (
     IncidenciaForm,
     EditarVecinoForm,
     AbonoForm,
-    ReportePagoForm
+    ReportePagoForm,
+    IngresoExtraForm
 )
 
-from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia, ReportePago
+from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia, ReportePago, IngresoExtraordinario
 from django.db.models import Sum, Max, Count, Q
 from django.db.models.functions import TruncMonth
 from itertools import chain
@@ -1223,3 +1224,16 @@ def balance_residencial(request):
         'total_mant': total_favor_mant_global, # Pasamos total Mant.
         'total_gas': total_favor_gas_global    # Pasamos total Gas.
     })
+
+@login_required
+def registrar_ingreso_extra(request):
+    if request.method == 'POST':
+        form = IngresoExtraForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "¡Ingreso extraordinario registrado con éxito!")
+            return redirect('lista_ingresos_extras') # O a tu dashboard
+    else:
+        form = IngresoExtraForm()
+    
+    return render(request, 'registrar_ingreso_extra.html', {'form': form})

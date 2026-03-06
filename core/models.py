@@ -312,3 +312,22 @@ class ReportePago(models.Model):
 
     def __str__(self):
         return f"Pago ${self.monto} - {self.usuario.username}"
+    
+class IngresoExtraordinario(models.Model):
+    CATEGORIAS = [
+        ('CONTROL', 'Venta de Control/Token'),
+        ('BBQ', 'Uso de Gas BBQ'),
+        ('MULTA', 'Multa / Sanción'),
+        ('DANOS', 'Cobro por Daños (Sillas/Áreas)'),
+        ('OTROS', 'Otros Ingresos'),
+    ]
+
+    Apartamento = models.ForeignKey('Apartamento', on_delete=models.CASCADE, verbose_name="Apartamento/Unidad")
+    categoria = models.CharField(max_length=20, choices=CATEGORIAS, default='OTROS')
+    concepto_detalle = models.CharField(max_length=255, help_text="Ej: Control portón negro - Apto 302")
+    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    fecha_pago = models.DateField(auto_now_add=True)
+    comprobante = models.CharField(max_length=50, blank=True, null=True, help_text="No. de recibo físico")
+
+    def __str__(self):
+        return f"{self.get_categoria_display()} - {self.Apartamento.nombre_o_numero}"
