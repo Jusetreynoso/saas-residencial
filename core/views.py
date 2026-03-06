@@ -1232,7 +1232,7 @@ def registrar_ingreso_extraordinario(request):
         if form.is_valid():
             form.save()
             messages.success(request, "¡Ingreso extraordinario registrado con éxito!")
-            return redirect('lista_ingresos_extras') # O a tu dashboard
+            return redirect('dashboard') # O a tu dashboard
     else:
         form = IngresoExtraForm()
     
