@@ -779,8 +779,7 @@ def ver_recibo(request, factura_id):
     return render(request, 'core/recibo_print.html', {'factura': factura})
 
 
-# --- GESTIÓN DE VECINOS ---
-# En core/views.py
+
 
 @login_required
 def lista_vecinos(request):
@@ -1253,3 +1252,5 @@ def registrar_ingreso_extraordinario(request):
         form = IngresoExtraForm()
     
     return render(request, 'core/registrar_ingreso_extra.html', {'form': form})
+
+# Forzando actualizacion git
