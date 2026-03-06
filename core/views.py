@@ -575,8 +575,9 @@ def reporte_financiero(request):
         fecha_pago__year=anio_actual
     ).aggregate(Sum('monto'))['monto__sum'] or 0
 
+    # CORRECCIÓN AQUÍ: Usamos 'Apartamento__residencial' y 'fecha_pago'
     ingresos_extra_anual = IngresoExtraordinario.objects.filter(
-        residencial=residencial,
+        Apartamento__residencial=residencial, # <--- CAMBIO CLAVE
         fecha_pago__year=anio_actual
     ).aggregate(Sum('monto'))['monto__sum'] or 0
 
@@ -596,8 +597,9 @@ def reporte_financiero(request):
         fecha_pago__year=anio_actual
     ).annotate(mes=TruncMonth('fecha_pago')).values('mes').annotate(total=Sum('monto')).order_by('mes')
 
+    # CORRECCIÓN AQUÍ TAMBIÉN
     ingresos_extra_qs = IngresoExtraordinario.objects.filter(
-        residencial=residencial,
+        Apartamento__residencial=residencial, # <--- CAMBIO CLAVE
         fecha_pago__year=anio_actual
     ).annotate(mes=TruncMonth('fecha_pago')).values('mes').annotate(total=Sum('monto')).order_by('mes')
 
@@ -647,8 +649,9 @@ def reporte_financiero(request):
         fecha_pago__lt=timezone.datetime(anio_actual, mes_actual, 1)
     ).aggregate(Sum('monto'))['monto__sum'] or 0
 
+    # CORRECCIÓN AQUÍ
     ingresos_extra_historicos = IngresoExtraordinario.objects.filter(
-        residencial=residencial,
+        Apartamento__residencial=residencial, # <--- CAMBIO CLAVE
         fecha_pago__lt=timezone.datetime(anio_actual, mes_actual, 1)
     ).aggregate(Sum('monto'))['monto__sum'] or 0
     
@@ -667,8 +670,9 @@ def reporte_financiero(request):
         fecha_pago__month=mes_actual
     )
 
+    # CORRECCIÓN AQUÍ
     mov_extras = IngresoExtraordinario.objects.filter(
-        residencial=residencial,
+        Apartamento__residencial=residencial, # <--- CAMBIO CLAVE
         fecha_pago__year=anio_actual,
         fecha_pago__month=mes_actual
     )
@@ -679,7 +683,7 @@ def reporte_financiero(request):
         fecha_gasto__month=mes_actual
     )
 
-    # Normalización de movimientos para la tabla
+    # Normalización para la tabla
     for i in mov_ingresos: 
         i.tipo_mov = 'INGRESO'
         i.fecha_mov = i.fecha_pago
@@ -689,7 +693,13 @@ def reporte_financiero(request):
         e.tipo_mov = 'INGRESO'
         e.fecha_mov = e.fecha_pago
         e.concepto_tabla = f"💰 EXTRA: {e.concepto_detalle}"
-        
+        e.monto = e.monto 
+        # Como el modelo no tiene 'usuario', usamos el dueño del apartamento si existe
+        if e.Apartamento and e.Apartamento.habitantes.exists():
+             e.usuario_display = e.Apartamento.habitantes.first().username
+        else:
+             e.usuario_display = "Externo/Admin"
+
     for g in mov_gastos: 
         g.tipo_mov = 'GASTO'
         g.fecha_mov = g.fecha_gasto
@@ -707,13 +717,21 @@ def reporte_financiero(request):
         else:
             saldo_acumulado -= mov.monto
         
+        # Determinamos qué nombre de usuario mostrar
+        if hasattr(mov, 'usuario_display'):
+            user_show = mov.usuario_display
+        elif hasattr(mov, 'usuario') and mov.usuario:
+            user_show = mov.usuario.username
+        else:
+            user_show = 'Admin'
+
         tabla_movimientos.append({
             'fecha': mov.fecha_mov,
             'concepto': mov.concepto_tabla,
             'tipo': mov.tipo_mov,
             'monto': mov.monto,
             'saldo': saldo_acumulado,
-            'usuario': mov.usuario.username if hasattr(mov, 'usuario') and mov.usuario else 'Admin'
+            'usuario': user_show
         })
 
     context = {
@@ -1244,13 +1262,12 @@ def registrar_ingreso_extraordinario(request):
         form = IngresoExtraForm(request.POST)
         if form.is_valid():
             ingreso = form.save(commit=False)
-            ingreso.residencial = request.user.residencial # Asignar el residencial
+            # ELIMINAMOS LA LÍNEA: ingreso.residencial = ... (NO EXISTE)
+            # El residencial se deduce automáticamente del Apartamento seleccionado
             ingreso.save()
             messages.success(request, "¡Ingreso extraordinario registrado con éxito!")
-            return redirect('dashboard') # <--- DEBE DECIR DASHBOARD AQUÍ
+            return redirect('dashboard')
     else:
         form = IngresoExtraForm()
     
     return render(request, 'core/registrar_ingreso_extra.html', {'form': form})
-
-# Forzando actualizacion git
