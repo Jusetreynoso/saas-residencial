@@ -580,7 +580,7 @@ def reporte_financiero(request):
     # NUEVO: Sumar ingresos extraordinarios al total anual
     ingresos_extra_anual = IngresoExtraordinario.objects.filter(
         residencial=residencial,
-        fecha__year=anio_actual
+        fecha_pago__year=anio_actual
     ).aggregate(Sum('monto'))['monto__sum'] or 0
 
     total_ingresos = ingresos_facturas + ingresos_extra_anual
@@ -606,8 +606,8 @@ def reporte_financiero(request):
     # NUEVO: Queryset de ingresos extras por mes
     ingresos_extra_qs = IngresoExtraordinario.objects.filter(
         residencial=residencial,
-        fecha__year=anio_actual
-    ).annotate(mes=TruncMonth('fecha')).values('mes').annotate(total=Sum('monto')).order_by('mes')
+        fecha_pago__year=anio_actual
+    ).annotate(mes=TruncMonth('fecha_pago')).values('mes').annotate(total=Sum('monto')).order_by('mes')
 
     gastos_qs = Gasto.objects.filter(
         residencial=residencial,
@@ -668,7 +668,7 @@ def reporte_financiero(request):
     # NUEVO: Sumar ingresos extraordinarios viejos al saldo acumulado
     ingresos_extra_historicos = IngresoExtraordinario.objects.filter(
         residencial=residencial,
-        fecha__lt=timezone.datetime(anio_actual, mes_actual, 1)
+        fecha_pago__lt=timezone.datetime(anio_actual, mes_actual, 1)
     ).aggregate(Sum('monto'))['monto__sum'] or 0
     
     gastos_historicos = Gasto.objects.filter(
@@ -690,8 +690,8 @@ def reporte_financiero(request):
     # NUEVO: Obtener ingresos extras del mes actual
     mov_extras = IngresoExtraordinario.objects.filter(
         residencial=residencial,
-        fecha__year=anio_actual,
-        fecha__month=mes_actual
+        fecha_pago__year=anio_actual,
+        fecha_pago__month=mes_actual
     )
 
     mov_gastos = Gasto.objects.filter(
@@ -709,8 +709,8 @@ def reporte_financiero(request):
     # NUEVO: Formatear ingresos extras para la lista
     for e in mov_extras:
         e.tipo_mov = 'INGRESO' # Se trata como ingreso en la tabla
-        e.fecha_mov = e.fecha
-        e.concepto_display = f"EXTRA: {e.concepto}"
+        e.fecha_mov = e.fecha_pago
+        e.concepto_tabla = f"💰 EXTRA: {e.concepto_detalle}"
         e.monto = e.monto # Ya lo tiene el modelo
         
     for g in mov_gastos: 
