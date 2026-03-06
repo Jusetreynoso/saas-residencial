@@ -96,3 +96,5 @@ class IngresoExtraordinarioAdmin(admin.ModelAdmin):
     
     # Barra de búsqueda para encontrar conceptos específicos
     search_fields = ('concepto_detalle',)
+
+# Forzando actualizacion del admin panel - Intento 1
