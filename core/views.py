@@ -1236,4 +1236,4 @@ def registrar_ingreso_extraordinario(request):
     else:
         form = IngresoExtraForm()
     
-    return render(request, 'registrar_ingreso_extra.html', {'form': form})
+    return render(request, 'core/registrar_ingreso_extra.html', {'form': form})
