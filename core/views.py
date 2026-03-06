@@ -1226,7 +1226,7 @@ def balance_residencial(request):
     })
 
 @login_required
-def registrar_ingreso_extra(request):
+def registrar_ingreso_extraordinario(request):
     if request.method == 'POST':
         form = IngresoExtraForm(request.POST)
         if form.is_valid():
