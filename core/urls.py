@@ -62,4 +62,6 @@ urlpatterns = [
     path('gestionar-pagos/', views.gestionar_reportes_pago, name='gestionar_reportes_pago'),
 
     path('balance-general/', views.balance_residencial, name='balance_residencial'),
+
+     path('ingresos-extra/nuevo/', views.registrar_ingreso_extraordinario, name='registrar_ingreso_extraordinario'),
 ]
