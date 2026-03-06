@@ -19,7 +19,7 @@ class Residencial(models.Model):
     dias_maximos_anticipacion = models.IntegerField(default=30, help_text="Días máximos de futuro permitidos")
     duracion_maxima_horas = models.IntegerField(default=5, help_text="Horas máximas permitidas por evento")
 
-    # --- NUEVO: CONFIGURACIÓN FINANCIERA ---
+    # --- CONFIGURACIÓN FINANCIERA ---
     # Día del mes que se genera la factura (ej: día 1)
     dia_corte = models.IntegerField(default=1, help_text="Día del mes para generar cuotas")
     # Cuántos días tienen para pagar antes de mora (ej: 15 días)
@@ -28,6 +28,13 @@ class Residencial(models.Model):
     porcentaje_mora = models.DecimalField(max_digits=5, decimal_places=2, default=5.00, help_text="% de Recargo por mora")
 
     saldo_inicial = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, help_text="Dinero en banco antes de usar el sistema")
+
+    # --- NUEVO CAMPO AGREGADO (SIN ROMPER NADA) ---
+    bloquear_morosos = models.BooleanField(
+        default=False, 
+        verbose_name="Bloquear reservas a morosos",
+        help_text="Si se activa, los usuarios con cuotas vencidas no podrán crear reservas."
+    )
 
     def __str__(self):
         return self.nombre
@@ -331,3 +338,5 @@ class IngresoExtraordinario(models.Model):
 
     def __str__(self):
         return f"{self.concepto_detalle} - {self.monto} (Apto {self.Apartamento.numero})"
+    
+

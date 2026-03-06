@@ -94,6 +94,33 @@ def dashboard(request):
 # ---------------------------------------------
 @login_required
 def crear_reserva(request):
+    # =========================================================================
+    # INICIO NUEVA REGLA: BLOQUEO POR MOROSIDAD
+    # =========================================================================
+    residencial = request.user.residencial
+    
+    # 1. Verificamos si el Edificio tiene activada la regla "bloquear_morosos"
+    # Usamos getattr por seguridad, por si acaso no has corrido migraciones aún
+    if getattr(residencial, 'bloquear_morosos', False):
+        hoy = timezone.now().date()
+        
+        # 2. Buscamos si el usuario tiene CUOTAS de mantenimiento vencidas
+        deuda_vencida = Factura.objects.filter(
+            usuario=request.user,
+            residencial=residencial,
+            tipo='CUOTA',              # Solo mantenimiento (puedes quitar esta línea si quieres bloquear por Gas también)
+            estado='PENDIENTE',        # Que deba dinero
+            fecha_vencimiento__lt=hoy  # Que la fecha límite ya pasó
+        ).exists()
+        
+        # 3. Si tiene deuda, lo bloqueamos y mandamos mensaje
+        if deuda_vencida:
+            messages.error(request, "⛔ Acceso denegado: Tienes cuotas de mantenimiento vencidas. Por favor, regulariza tu deuda para reservar áreas sociales.")
+            return redirect('dashboard')
+    # =========================================================================
+    # FIN NUEVA REGLA (El resto del código sigue igual)
+    # =========================================================================
+
     reservas_ocupadas = Reserva.objects.filter(
         residencial=request.user.residencial,
         estado__in=['PENDIENTE', 'APROBADA']
