@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 # 1. ACTUALIZAMOS IMPORTS: Agregamos Incidencia
 from .models import (
     Usuario, Residencial, Apartamento, AreaSocial, 
-    Reserva, BloqueoFecha, Gasto, Factura, LecturaGas, Aviso, Incidencia, ReportePago, Aviso
+    Reserva, BloqueoFecha, Gasto, Factura, LecturaGas, Aviso, Incidencia, ReportePago, Aviso, IngresoExtraordinario
 )
 
 # --- CONFIGURACIÓN DE USUARIO ---
@@ -85,3 +85,14 @@ admin.site.register(AreaSocial)
 admin.site.register(Reserva, ReservaAdmin)
 admin.site.register(BloqueoFecha, BloqueoFechaAdmin)
 admin.site.register(ReportePago)
+
+@admin.register(IngresoExtraordinario)
+class IngresoExtraordinarioAdmin(admin.ModelAdmin):
+    # Estas son las columnas que verás en la tabla
+    list_display = ('id', 'fecha_pago', 'monto', 'concepto_detalle', 'Apartamento')
+    
+    # Filtro lateral para buscar por fecha rápido
+    list_filter = ('fecha_pago',)
+    
+    # Barra de búsqueda para encontrar conceptos específicos
+    search_fields = ('concepto_detalle',)
