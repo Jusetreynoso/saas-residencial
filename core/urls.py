@@ -72,6 +72,8 @@ urlpatterns = [
     path('reporte-gas-whatsapp/', views.reporte_gas_whatsapp, name='reporte_gas_whatsapp'),
 
     path('reportes/', views.menu_reportes, name='menu_reportes'),
-    
+
     path('reportes/mensual/', views.reporte_mensual_dinamico, name='reporte_mensual_dinamico'),
+    
+    path('reportes/estado-cuenta/', views.reporte_estado_cuenta, name='reporte_estado_cuenta'),
 ]

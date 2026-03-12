@@ -1532,3 +1532,40 @@ def reporte_mensual_dinamico(request):
     }
 
     return render(request, 'core/reporte_mensual_dinamico.html', context)
+
+@login_required
+def reporte_estado_cuenta(request):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+
+    residencial = request.user.residencial
+    
+    # Lista de vecinos para el selector
+    vecinos = Usuario.objects.filter(residencial=residencial).order_by('apartamento__numero')
+    
+    vecino_seleccionado = None
+    facturas = []
+    total_deuda = Decimal('0.00')
+
+    # Si se seleccionó un vecino en el formulario
+    usuario_id = request.GET.get('usuario_id')
+    if usuario_id:
+        vecino_seleccionado = get_object_or_404(Usuario, id=usuario_id, residencial=residencial)
+        
+        # Traemos todas sus facturas (pagadas y pendientes) ordenadas de la más nueva a la más vieja
+        facturas = Factura.objects.filter(usuario=vecino_seleccionado).order_by('-fecha_emision')
+        
+        # Calculamos la deuda total actual
+        deudas = facturas.filter(estado='PENDIENTE')
+        total_deuda = sum((f.saldo_pendiente if f.saldo_pendiente is not None else f.monto) for f in deudas)
+
+    context = {
+        'vecinos': vecinos,
+        'vecino_seleccionado': vecino_seleccionado,
+        'facturas': facturas,
+        'total_deuda': total_deuda,
+        'hoy': timezone.now().date(),
+        'residencial': residencial
+    }
+    
+    return render(request, 'core/reporte_estado_cuenta.html', context)
