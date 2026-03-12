@@ -20,7 +20,7 @@
                 </select>
                 <select name="anio" class="form-select w-auto">
                     {% for a in lista_anios %}
-                        <option value="{{ a }}" {% if a == anio_seleccionado %}selected{% endif %}>{{ a }}</option>
+                        <option value="{{ a|stringformat:'d' }}" {% if a == anio_seleccionado %}selected{% endif %}>{{ a|stringformat:'d' }}</option>
                     {% endfor %}
                 </select>
                 <button type="submit" class="btn btn-primary fw-bold">Generar</button>

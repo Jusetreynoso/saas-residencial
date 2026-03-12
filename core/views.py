@@ -1437,7 +1437,10 @@ def reporte_mensual_dinamico(request):
     # 1. Obtener mes y año seleccionados (por defecto el mes actual)
     hoy = timezone.now()
     mes_seleccionado = int(request.GET.get('mes', hoy.month))
-    anio_seleccionado = int(request.GET.get('anio', hoy.year))
+    
+    # Capturamos el año como texto y le borramos cualquier espacio invisible (\xa0), espacio normal o coma
+    anio_raw = str(request.GET.get('anio', hoy.year)).replace('\xa0', '').replace(' ', '').replace(',', '')
+    anio_seleccionado = int(anio_raw)
 
     # --- LÓGICA DE CUADRE DE BANCO (POST) ---
     if request.method == 'POST' and 'cuadrar_banco' in request.POST:
