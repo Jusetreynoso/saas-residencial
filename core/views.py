@@ -1419,3 +1419,113 @@ def reporte_gas_whatsapp(request):
     }
     
     return render(request, 'core/reporte_gas_whatsapp.html', context)
+
+@login_required
+def menu_reportes(request):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+    
+    return render(request, 'core/menu_reportes.html')
+
+@login_required
+def reporte_mensual_dinamico(request):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+
+    residencial = request.user.residencial
+    
+    # 1. Obtener mes y año seleccionados (por defecto el mes actual)
+    hoy = timezone.now()
+    mes_seleccionado = int(request.GET.get('mes', hoy.month))
+    anio_seleccionado = int(request.GET.get('anio', hoy.year))
+
+    # --- LÓGICA DE CUADRE DE BANCO (POST) ---
+    if request.method == 'POST' and 'cuadrar_banco' in request.POST:
+        balance_real = Decimal(request.POST.get('balance_real', 0))
+        balance_sistema = Decimal(request.POST.get('balance_sistema', 0))
+        
+        diferencia = balance_real - balance_sistema
+        
+        if diferencia != 0:
+            # Ajustamos el saldo inicial del residencial para cuadrar la matemática global
+            residencial.saldo_inicial += diferencia
+            residencial.save()
+            
+            if diferencia > 0:
+                messages.success(request, f"✅ Banco cuadrado. Se sumaron ${diferencia:,.2f} al sistema.")
+            else:
+                messages.warning(request, f"✅ Banco cuadrado. Se restaron ${abs(diferencia):,.2f} al sistema.")
+        
+        # Recargar la misma página con el mismo mes y año
+        return redirect(f"{request.path}?mes={mes_seleccionado}&anio={anio_seleccionado}")
+    # ----------------------------------------
+
+    # 2. CÁLCULO DE INGRESOS DEL PERIODO
+    ingresos_mant = Factura.objects.filter(
+        residencial=residencial, tipo='CUOTA', estado='PAGADO', 
+        fecha_pago__year=anio_seleccionado, fecha_pago__month=mes_seleccionado
+    ).aggregate(Sum('monto'))['monto__sum'] or Decimal('0.00')
+
+    ingresos_gas = Factura.objects.filter(
+        residencial=residencial, tipo='GAS', estado='PAGADO', 
+        fecha_pago__year=anio_seleccionado, fecha_pago__month=mes_seleccionado
+    ).aggregate(Sum('monto'))['monto__sum'] or Decimal('0.00')
+
+    ingresos_extra = IngresoExtraordinario.objects.filter(
+        Apartamento__residencial=residencial, 
+        fecha_pago__year=anio_seleccionado, fecha_pago__month=mes_seleccionado
+    ).aggregate(Sum('monto'))['monto__sum'] or Decimal('0.00')
+
+    total_ingresos_periodo = ingresos_mant + ingresos_gas + ingresos_extra
+
+    # 3. CÁLCULO DE GASTOS DEL PERIODO
+    gastos_qs = Gasto.objects.filter(
+        residencial=residencial, 
+        fecha_gasto__year=anio_seleccionado, fecha_gasto__month=mes_seleccionado
+    )
+    total_gastos_periodo = gastos_qs.aggregate(Sum('monto'))['monto__sum'] or Decimal('0.00')
+
+    balance_del_periodo = total_ingresos_periodo - total_gastos_periodo
+
+    # 4. CÁLCULO DEL BALANCE GLOBAL ESPERADO EN EL BANCO (Hasta este mes)
+    import calendar
+    ultimo_dia_mes = calendar.monthrange(anio_seleccionado, mes_seleccionado)[1]
+    fecha_corte = timezone.datetime(anio_seleccionado, mes_seleccionado, ultimo_dia_mes).date()
+
+    ingresos_historicos = Factura.objects.filter(
+        residencial=residencial, estado='PAGADO', fecha_pago__lte=fecha_corte
+    ).aggregate(Sum('monto'))['monto__sum'] or Decimal('0.00')
+
+    extras_historicos = IngresoExtraordinario.objects.filter(
+        Apartamento__residencial=residencial, fecha_pago__lte=fecha_corte
+    ).aggregate(Sum('monto'))['monto__sum'] or Decimal('0.00')
+
+    gastos_historicos = Gasto.objects.filter(
+        residencial=residencial, fecha_gasto__lte=fecha_corte
+    ).aggregate(Sum('monto'))['monto__sum'] or Decimal('0.00')
+
+    balance_esperado_banco = residencial.saldo_inicial + ingresos_historicos + extras_historicos - gastos_historicos
+
+    # Preparar listas de meses y años para el formulario
+    lista_meses = [{'id': i, 'nombre': timezone.datetime(2000, i, 1).strftime('%B').capitalize()} for i in range(1, 13)]
+    lista_anios = range(2024, hoy.year + 2)
+
+    context = {
+        'mes_seleccionado': mes_seleccionado,
+        'anio_seleccionado': anio_seleccionado,
+        'lista_meses': lista_meses,
+        'lista_anios': lista_anios,
+        
+        'ingresos_mant': ingresos_mant,
+        'ingresos_gas': ingresos_gas,
+        'ingresos_extra': ingresos_extra,
+        'total_ingresos_periodo': total_ingresos_periodo,
+        
+        'gastos_detalle': gastos_qs,
+        'total_gastos_periodo': total_gastos_periodo,
+        
+        'balance_del_periodo': balance_del_periodo,
+        'balance_esperado_banco': balance_esperado_banco
+    }
+
+    return render(request, 'core/reporte_mensual_dinamico.html', context)

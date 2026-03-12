@@ -70,4 +70,8 @@ urlpatterns = [
     path('vecinos/<int:user_id>/cambiar-clave/', views.cambiar_clave_vecino, name='cambiar_clave_vecino'),
 
     path('reporte-gas-whatsapp/', views.reporte_gas_whatsapp, name='reporte_gas_whatsapp'),
+
+    path('reportes/', views.menu_reportes, name='menu_reportes'),
+    
+    path('reportes/mensual/', views.reporte_mensual_dinamico, name='reporte_mensual_dinamico'),
 ]
