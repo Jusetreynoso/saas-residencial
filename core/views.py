@@ -1317,3 +1317,105 @@ def cambiar_mi_clave(request):
         form = PasswordChangeForm(request.user)
         
     return render(request, 'core/cambiar_mi_clave.html', {'form': form})
+
+@login_required
+def reporte_gas_whatsapp(request):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+        
+    residencial = request.user.residencial
+    
+    # 1. Obtener la lectura más reciente para saber qué mes estamos reportando
+    ultima_lectura_global = LecturaGas.objects.filter(residencial=residencial).order_by('-fecha_lectura').first()
+    
+    if not ultima_lectura_global:
+        messages.warning(request, "⚠️ No hay lecturas de gas registradas para generar el reporte.")
+        return redirect('dashboard')
+        
+    mes_reporte = ultima_lectura_global.fecha_lectura.month
+    anio_reporte = ultima_lectura_global.fecha_lectura.year
+    precio_galon = ultima_lectura_global.precio_galon_mes
+    
+    # Nombres de meses en español
+    meses = ['', 'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE']
+    nombre_mes = f"{meses[mes_reporte]} {anio_reporte}"
+    
+    apartamentos = Apartamento.objects.filter(residencial=residencial).order_by('numero')
+    
+    # 2. Agrupar por edificio (Primera letra del apto, ej: "A" de "A-101")
+    datos_por_edificio = {}
+    total_general_galones = Decimal('0.00')
+    total_general_pagar = Decimal('0.00')
+    
+    for apt in apartamentos:
+        edificio = apt.numero[0] if apt.numero else "Otros"
+        if edificio not in datos_por_edificio:
+            datos_por_edificio[edificio] = {
+                'apartamentos': [],
+                'subtotal_galones': Decimal('0.00'),
+                'subtotal_pagar': Decimal('0.00')
+            }
+            
+        dueno = apt.habitantes.first()
+        
+        # Buscar la lectura de este mes para este apto
+        lectura_mes = LecturaGas.objects.filter(
+            apartamento=apt, 
+            fecha_lectura__month=mes_reporte, 
+            fecha_lectura__year=anio_reporte
+        ).first()
+        
+        galones = lectura_mes.consumo_galones if lectura_mes else Decimal('0.00')
+        costo_mes = galones * precio_galon
+        
+        deuda_total_gas = Decimal('0.00')
+        saldo_favor = Decimal('0.00')
+        
+        if dueno:
+            facturas_gas = Factura.objects.filter(usuario=dueno, tipo='GAS', estado='PENDIENTE')
+            deuda_total_gas = sum((f.saldo_pendiente or f.monto) for f in facturas_gas)
+            saldo_favor = dueno.saldo_favor_gas or Decimal('0.00')
+            
+        a_pagar = deuda_total_gas
+        
+        # 3. Lógica del Balance (Igual a tu Excel)
+        if saldo_favor > 0:
+            # En tu Excel el saldo a favor sale en negativo
+            balance_txt = f"-${saldo_favor:.2f}" 
+            color_balance = "text-success fw-bold"
+        else:
+            # Verificamos si debe de meses anteriores
+            deuda_anterior = deuda_total_gas - costo_mes
+            if deuda_anterior > 0:
+                balance_txt = f"${deuda_anterior:.2f}"
+                color_balance = "text-danger fw-bold"
+            else:
+                balance_txt = "$0.00"
+                color_balance = "text-muted"
+                
+        # Solo lo agregamos al reporte si consumió gas o si debe dinero
+        if galones > 0 or a_pagar > 0:
+            datos_por_edificio[edificio]['apartamentos'].append({
+                'numero': apt.numero,
+                'galones': galones,
+                'balance_txt': balance_txt,
+                'color_balance': color_balance,
+                'a_pagar': a_pagar
+            })
+            
+            datos_por_edificio[edificio]['subtotal_galones'] += galones
+            datos_por_edificio[edificio]['subtotal_pagar'] += a_pagar
+            
+            total_general_galones += galones
+            total_general_pagar += a_pagar
+
+    context = {
+        'nombre_mes': nombre_mes,
+        'precio_galon': precio_galon,
+        'datos_por_edificio': datos_por_edificio,
+        'total_general_galones': total_general_galones,
+        'total_general_pagar': total_general_pagar,
+        'residencial': residencial.nombre.upper()
+    }
+    
+    return render(request, 'core/reporte_gas_whatsapp.html', context)

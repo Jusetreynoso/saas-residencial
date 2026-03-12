@@ -68,4 +68,6 @@ urlpatterns = [
     path('perfil/cambiar-clave/', views.cambiar_mi_clave, name='cambiar_mi_clave'),
     
     path('vecinos/<int:user_id>/cambiar-clave/', views.cambiar_clave_vecino, name='cambiar_clave_vecino'),
+
+    path('reporte-gas-whatsapp/', views.reporte_gas_whatsapp, name='reporte_gas_whatsapp'),
 ]

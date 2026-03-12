@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte Gas - WhatsApp</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f0f2f5; padding: 20px 0; }
+        .report-container {
+            max-width: 650px; /* Ancho ideal para capturas de pantalla */
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        
+        /* Colores inspirados en tu archivo de Excel */
+        .bg-excel-header { background-color: #e26b0a !important; color: white; }
+        .bg-excel-blue { background-color: #4f81bd !important; color: white; }
+        .bg-excel-green { background-color: #00b050 !important; color: white; }
+        .bg-excel-green-light { background-color: #c4d79b !important; font-weight: bold; }
+        .bg-excel-grey { background-color: #d9d9d9 !important; }
+        
+        .table-bordered th, .table-bordered td { border: 1px solid #4f81bd !important; }
+        .table-sm td, .table-sm th { padding: 4px 8px; vertical-align: middle; }
+        
+        /* Ocultar botones al imprimir o tomar captura */
+        @media print {
+            .no-print { display: none !important; }
+            body { background-color: white; padding: 0; }
+            .report-container { box-shadow: none; max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container text-center mb-3 no-print">
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary btn-sm">⬅ Volver al Dashboard</a>
+        <button onclick="window.print()" class="btn btn-primary btn-sm">📸 Guardar/Imprimir (PDF)</button>
+        <p class="text-muted mt-2 small">Tip: Toma una captura de pantalla del cuadro inferior para enviarla por WhatsApp.</p>
+    </div>
+
+    <div class="report-container">
+        
+        <div class="bg-excel-header d-flex justify-content-between align-items-center p-2 fw-bold text-uppercase" style="border: 2px solid #000;">
+            <div style="font-size: 1.1rem;">GAS MES DE {{ nombre_mes }} {{ residencial }}</div>
+            <div style="font-size: 1.1rem;">{{ precio_galon }}</div>
+        </div>
+
+        {% for edificio, datos in datos_por_edificio.items %}
+            {% if datos.apartamentos %}
+            <table class="table table-sm table-bordered mb-0 text-center" style="font-size: 0.95rem;">
+                <thead class="bg-excel-blue">
+                    <tr>
+                        <th style="width: 20%;">Edificio {{ edificio }}</th>
+                        <th style="width: 30%;">Galones Consumidos</th>
+                        <th style="width: 30%;">Balance Pendiente o a favor</th>
+                        <th style="width: 20%;">A Pagar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for apt in datos.apartamentos %}
+                    <tr class="{% cycle 'bg-light' 'bg-excel-grey' %}">
+                        <td class="text-primary fw-bold text-start ps-3">{{ apt.numero }}</td>
+                        <td>{{ apt.galones|floatformat:2 }}</td>
+                        <td class="{{ apt.color_balance }}">{{ apt.balance_txt }}</td>
+                        <td class="bg-excel-green text-end pe-3">${{ apt.a_pagar|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                    
+                    <tr class="fw-bold">
+                        <td class="bg-excel-green text-start ps-3">Sub Total</td>
+                        <td>{{ datos.subtotal_galones|floatformat:2 }}</td>
+                        <td></td>
+                        <td class="text-end pe-3" style="text-decoration: underline;">${{ datos.subtotal_pagar|floatformat:2 }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            {% endif %}
+        {% endfor %}
+
+    </div>
+
+</body>
+</html>
