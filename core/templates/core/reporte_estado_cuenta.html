@@ -55,7 +55,7 @@
         <div class="col-8">
             <h2 class="fw-bold text-uppercase mb-0">{{ residencial.nombre }}</h2>
             <p class="text-muted mb-0">{{ residencial.direccion }}</p>
-            <p class="text-muted mb-0">Fecha de Emisión: {{ hoy|date:"d de F, Y" }}</p>
+            <p class="text-muted mb-0">Fecha de Emisión: {{ hoy|date:"d" }} de {{ hoy|date:"F, Y" }}</p>
         </div>
         <div class="col-4 text-end">
             <h4 class="text-primary fw-bold">ESTADO DE CUENTA</h4>
