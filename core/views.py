@@ -1655,3 +1655,88 @@ def reporte_morosidad(request):
     }
     
     return render(request, 'core/reporte_morosidad.html', context)
+
+@login_required
+def reporte_transparencia(request):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+
+    residencial = request.user.residencial
+    hoy = timezone.now()
+    mes_seleccionado = int(request.GET.get('mes', hoy.month))
+    anio_raw = str(request.GET.get('anio', hoy.year)).replace('\xa0', '').replace(' ', '').replace(',', '')
+    anio_seleccionado = int(anio_raw)
+
+    # 1. PROYECCIÓN VS RECAUDACIÓN (Eficiencia de Cobro)
+    # Buscamos las cuotas generadas en ESTE mes
+    facturas_mes = Factura.objects.filter(
+        residencial=residencial,
+        tipo='CUOTA',
+        fecha_emision__year=anio_seleccionado,
+        fecha_emision__month=mes_seleccionado
+    )
+    
+    proyectado = facturas_mes.aggregate(Sum('monto'))['monto__sum'] or Decimal('0.00')
+    
+    # Calculamos cuánto de ese monto facturado ya entró al banco
+    recaudado = sum(f.monto - (f.saldo_pendiente if f.saldo_pendiente is not None else f.monto) for f in facturas_mes if f.estado == 'PENDIENTE')
+    recaudado += sum(f.monto for f in facturas_mes if f.estado == 'PAGADO')
+
+    eficiencia = 0
+    if proyectado > 0:
+        eficiencia = (recaudado / proyectado) * 100
+
+    # 2. GASTOS POR CATEGORÍA
+    gastos_mes = Gasto.objects.filter(
+        residencial=residencial,
+        fecha_gasto__year=anio_seleccionado,
+        fecha_gasto__month=mes_seleccionado
+    )
+    total_gastos = gastos_mes.aggregate(Sum('monto'))['monto__sum'] or Decimal('0.00')
+
+    # Agrupamos los gastos por categoría en la base de datos
+    gastos_por_categoria = gastos_mes.values('categoria').annotate(total=Sum('monto')).order_by('-total')
+    
+    # --- CORRECCIÓN AQUÍ: Usamos TUS categorías exactas ---
+    cat_dict = dict(Gasto.CATEGORIAS)
+    
+    # Preparamos las listas para el gráfico de Chart.js
+    chart_labels = []
+    chart_data = []
+    lista_gastos_tabla = []
+    
+    for g in gastos_por_categoria:
+        # Busca el nombre bonito ('Compra de Gas (Camión)') basado en el código ('GAS')
+        nombre = cat_dict.get(g['categoria'], g['categoria'])
+        total_cat = float(g['total'])
+        porcentaje = (total_cat / float(total_gastos) * 100) if total_gastos > 0 else 0
+        
+        chart_labels.append(nombre)
+        chart_data.append(total_cat)
+        lista_gastos_tabla.append({
+            'nombre': nombre,
+            'monto': total_cat,
+            'porcentaje': porcentaje
+        })
+
+    lista_meses = [{'id': i, 'nombre': timezone.datetime(2000, i, 1).strftime('%B').capitalize()} for i in range(1, 13)]
+    lista_anios = range(2024, hoy.year + 2)
+
+    context = {
+        'mes_seleccionado': mes_seleccionado,
+        'anio_seleccionado': anio_seleccionado,
+        'lista_meses': lista_meses,
+        'lista_anios': lista_anios,
+        
+        'proyectado': proyectado,
+        'recaudado': float(recaudado),
+        'eficiencia': float(eficiencia),
+        
+        'total_gastos': total_gastos,
+        'lista_gastos_tabla': lista_gastos_tabla,
+        'chart_labels': json.dumps(chart_labels),
+        'chart_data': json.dumps(chart_data),
+        'residencial': residencial
+    }
+    
+    return render(request, 'core/reporte_transparencia.html', context)

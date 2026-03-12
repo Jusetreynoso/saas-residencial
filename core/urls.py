@@ -78,4 +78,6 @@ urlpatterns = [
     path('reportes/estado-cuenta/', views.reporte_estado_cuenta, name='reporte_estado_cuenta'),
 
     path('reportes/morosidad/', views.reporte_morosidad, name='reporte_morosidad'),
+
+    path('reportes/transparencia/', views.reporte_transparencia, name='reporte_transparencia'),
 ]
