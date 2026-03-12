@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, update_session_auth_hash
 from django.contrib import messages 
 from django.core.exceptions import ValidationError
 import json 
@@ -12,7 +12,7 @@ from decimal import Decimal
 # --- IMPORTS PARA CORREO (Se mantienen por si activas a futuro) ---
 from django.core.mail import send_mail
 from django.conf import settings
-from django.contrib.auth.forms import SetPasswordForm 
+from django.contrib.auth.forms import SetPasswordForm, PasswordChangeForm 
 from .forms import (
     ReservaForm, 
     LecturaGasForm, 
@@ -1298,3 +1298,21 @@ def registrar_ingreso_extraordinario(request):
         form = IngresoExtraForm()
     
     return render(request, 'core/registrar_ingreso_extra.html', {'form': form})
+
+@login_required
+def cambiar_mi_clave(request):
+    if request.method == 'POST':
+        # PasswordChangeForm requiere el usuario actual y los datos del POST
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            # Esta línea es CLAVE: evita que el usuario cierre sesión al cambiar la clave
+            update_session_auth_hash(request, user) 
+            messages.success(request, '✅ Tu contraseña ha sido actualizada exitosamente.')
+            return redirect('dashboard')
+        else:
+            messages.error(request, '⚠️ Hubo un error. Revisa los datos ingresados.')
+    else:
+        form = PasswordChangeForm(request.user)
+        
+    return render(request, 'core/cambiar_mi_clave.html', {'form': form})

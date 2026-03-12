@@ -63,5 +63,9 @@ urlpatterns = [
 
     path('balance-general/', views.balance_residencial, name='balance_residencial'),
 
-     path('ingresos-extra/nuevo/', views.registrar_ingreso_extraordinario, name='registrar_ingreso_extraordinario'),
+    path('ingresos-extra/nuevo/', views.registrar_ingreso_extraordinario, name='registrar_ingreso_extraordinario'),
+
+    path('perfil/cambiar-clave/', views.cambiar_mi_clave, name='cambiar_mi_clave'),
+    
+    path('vecinos/<int:user_id>/cambiar-clave/', views.cambiar_clave_vecino, name='cambiar_clave_vecino'),
 ]
