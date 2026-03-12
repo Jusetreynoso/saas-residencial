@@ -34,7 +34,7 @@
             <form action="{% url 'logout' %}" method="post" style="display:inline;">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-outline-light btn-sm fw-bold">Salir</button>
-                <a href="{% url 'cambiar_mi_clave' %}" class="btn btn-outline-primary btn-sm">🔑 Cambiar mi Clave</a>
+                <a href="{% url 'cambiar_mi_clave' %}" class="btn btn-outline-primary btn-sm ms-2">🔑 Cambiar mi Clave</a>
             </form>
         </div>
     </div>
