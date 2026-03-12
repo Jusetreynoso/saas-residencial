@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Morosidad (Aging)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .table-aging th { vertical-align: middle; text-align: center; }
+        .col-aldia { background-color: #f8f9fa; }
+        .col-30 { background-color: #fff3cd; } /* Amarillo claro */
+        .col-60 { background-color: #ffe8a1; } /* Amarillo */
+        .col-90 { background-color: #ffc107; } /* Naranja */
+        .col-mas90 { background-color: #f8d7da; color: #842029; font-weight: bold; } /* Rojo */
+        .col-total { font-weight: bold; background-color: #e9ecef; }
+        
+        @media print {
+            .no-print { display: none !important; }
+            body { background-color: white; }
+            .card { border: none; box-shadow: none !important; }
+            /* Forzar a imprimir colores de fondo */
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+    </style>
+</head>
+<body class="pb-5">
+
+<div class="container-fluid mt-4 px-4">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <a href="{% url 'menu_reportes' %}" class="btn btn-outline-secondary">⬅ Volver al Menú</a>
+        <button onclick="window.print()" class="btn btn-dark fw-bold">🖨️ Imprimir Reporte</button>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center py-3">
+            <h4 class="mb-0 fw-bold">🚨 Reporte de Morosidad por Antigüedad (Aging Report)</h4>
+            <span class="badge bg-light text-danger fs-6">{{ hoy|date:"d M Y" }}</span>
+        </div>
+        
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover table-aging mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-start ps-3">Apto</th>
+                            <th class="text-start">Vecino</th>
+                            <th title="Facturas emitidas pero que aún no vencen">Aún no Vence<br><small class="fw-normal">Por cobrar</small></th>
+                            <th>1 - 30 Días<br><small class="fw-normal text-warning">Atraso leve</small></th>
+                            <th>31 - 60 Días<br><small class="fw-normal text-warning">Atraso medio</small></th>
+                            <th>61 - 90 Días<br><small class="fw-normal text-warning">Atraso grave</small></th>
+                            <th class="text-danger">Más de 90 Días<br><small class="fw-normal">Crítico / Legal</small></th>
+                            <th class="fs-5">Deuda Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in datos_morosidad %}
+                        <tr>
+                            <td class="text-start ps-3 fw-bold">{{ fila.apto }}</td>
+                            <td class="text-start">{{ fila.usuario.first_name }} {{ fila.usuario.last_name }}</td>
+                            
+                            <td class="text-end col-aldia">{% if fila.al_dia > 0 %}${{ fila.al_dia|floatformat:2 }}{% else %}-{% endif %}</td>
+                            <td class="text-end col-30">{% if fila.dias_30 > 0 %}${{ fila.dias_30|floatformat:2 }}{% else %}-{% endif %}</td>
+                            <td class="text-end col-60">{% if fila.dias_60 > 0 %}${{ fila.dias_60|floatformat:2 }}{% else %}-{% endif %}</td>
+                            <td class="text-end col-90">{% if fila.dias_90 > 0 %}${{ fila.dias_90|floatformat:2 }}{% else %}-{% endif %}</td>
+                            <td class="text-end col-mas90">{% if fila.mas_90 > 0 %}${{ fila.mas_90|floatformat:2 }}{% else %}-{% endif %}</td>
+                            
+                            <td class="text-end col-total fs-6 text-danger">${{ fila.total|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center p-5 text-muted fs-5">¡Felicidades! No hay vecinos con deudas en este momento.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    
+                    {% if datos_morosidad %}
+                    <tfoot class="table-dark fs-6">
+                        <tr>
+                            <td colspan="2" class="text-end fw-bold pe-3">TOTAL CARTERA VENCIDA:</td>
+                            <td class="text-end">${{ totales_globales.al_dia|floatformat:2 }}</td>
+                            <td class="text-end">${{ totales_globales.dias_30|floatformat:2 }}</td>
+                            <td class="text-end">${{ totales_globales.dias_60|floatformat:2 }}</td>
+                            <td class="text-end">${{ totales_globales.dias_90|floatformat:2 }}</td>
+                            <td class="text-end text-danger fw-bold">${{ totales_globales.mas_90|floatformat:2 }}</td>
+                            <td class="text-end fw-bold text-warning fs-5">${{ totales_globales.total|floatformat:2 }}</td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-4 no-print text-muted small">
+        <p><strong>¿Cómo funciona esto?</strong> Este reporte ordena a los vecinos mostrando primero a los que tienen mayor deuda. Los colores se vuelven más rojos conforme la deuda supera los 30, 60 y 90 días, indicando dónde debes enfocar tus esfuerzos de cobranza.</p>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

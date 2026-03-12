@@ -1569,3 +1569,89 @@ def reporte_estado_cuenta(request):
     }
     
     return render(request, 'core/reporte_estado_cuenta.html', context)
+
+@login_required
+def reporte_morosidad(request):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+
+    residencial = request.user.residencial
+    hoy = timezone.now().date()
+    
+    vecinos = Usuario.objects.filter(residencial=residencial).order_by('apartamento__numero')
+    
+    datos_morosidad = []
+    
+    # Acumuladores globales para el final de la tabla
+    totales_globales = {
+        'al_dia': Decimal('0.00'),   # Debe dinero, pero aún no vence
+        'dias_30': Decimal('0.00'),  # 1 a 30 días vencido
+        'dias_60': Decimal('0.00'),  # 31 a 60 días vencido
+        'dias_90': Decimal('0.00'),  # 61 a 90 días vencido
+        'mas_90': Decimal('0.00'),   # Más de 90 días vencido (Crítico)
+        'total': Decimal('0.00')
+    }
+    
+    for vecino in vecinos:
+        # Buscamos facturas que no estén pagadas
+        facturas_pendientes = Factura.objects.filter(usuario=vecino).exclude(estado='PAGADO')
+        
+        if not facturas_pendientes.exists():
+            continue # Si no debe nada, saltamos al siguiente vecino
+            
+        vecino_data = {
+            'usuario': vecino,
+            'apto': vecino.apartamento.numero if vecino.apartamento else 'S/A',
+            'al_dia': Decimal('0.00'),
+            'dias_30': Decimal('0.00'),
+            'dias_60': Decimal('0.00'),
+            'dias_90': Decimal('0.00'),
+            'mas_90': Decimal('0.00'),
+            'total': Decimal('0.00')
+        }
+        
+        for f in facturas_pendientes:
+            monto_deuda = f.saldo_pendiente if f.saldo_pendiente is not None else f.monto
+            if monto_deuda <= 0:
+                continue
+                
+            # Calculamos los días de atraso basados en la fecha de vencimiento
+            dias_vencidos = 0
+            if f.fecha_vencimiento and f.fecha_vencimiento < hoy:
+                dias_vencidos = (hoy - f.fecha_vencimiento).days
+                
+            # Asignamos el monto a la cubeta correspondiente
+            if dias_vencidos <= 0:
+                vecino_data['al_dia'] += monto_deuda
+                totales_globales['al_dia'] += monto_deuda
+            elif dias_vencidos <= 30:
+                vecino_data['dias_30'] += monto_deuda
+                totales_globales['dias_30'] += monto_deuda
+            elif dias_vencidos <= 60:
+                vecino_data['dias_60'] += monto_deuda
+                totales_globales['dias_60'] += monto_deuda
+            elif dias_vencidos <= 90:
+                vecino_data['dias_90'] += monto_deuda
+                totales_globales['dias_90'] += monto_deuda
+            else:
+                vecino_data['mas_90'] += monto_deuda
+                totales_globales['mas_90'] += monto_deuda
+                
+            vecino_data['total'] += monto_deuda
+            totales_globales['total'] += monto_deuda
+        
+        # Solo agregamos al vecino al reporte si su deuda total es mayor a 0
+        if vecino_data['total'] > 0:
+            datos_morosidad.append(vecino_data)
+            
+    # Ordenar la lista de mayor a menor deuda (los más críticos arriba)
+    datos_morosidad = sorted(datos_morosidad, key=lambda x: x['total'], reverse=True)
+    
+    context = {
+        'datos_morosidad': datos_morosidad,
+        'totales_globales': totales_globales,
+        'hoy': hoy,
+        'residencial': residencial
+    }
+    
+    return render(request, 'core/reporte_morosidad.html', context)

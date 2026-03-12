@@ -76,4 +76,6 @@ urlpatterns = [
     path('reportes/mensual/', views.reporte_mensual_dinamico, name='reporte_mensual_dinamico'),
     
     path('reportes/estado-cuenta/', views.reporte_estado_cuenta, name='reporte_estado_cuenta'),
+
+    path('reportes/morosidad/', views.reporte_morosidad, name='reporte_morosidad'),
 ]
