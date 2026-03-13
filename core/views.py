@@ -1740,3 +1740,12 @@ def reporte_transparencia(request):
     }
     
     return render(request, 'core/reporte_transparencia.html', context)
+
+
+def landing_page(request):
+    # Si el usuario ya inició sesión y entra a la página principal, 
+    # es mejor mandarlo directo a su panel de control.
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+        
+    return render(request, 'core/landing.html')

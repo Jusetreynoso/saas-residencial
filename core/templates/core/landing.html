@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión Residencial Inteligente</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .hero-section {
+            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+            color: white;
+            padding: 100px 0 80px;
+        }
+        .feature-icon {
+            font-size: 2.5rem;
+            color: #0d6efd;
+            margin-bottom: 1rem;
+        }
+        .btn-cta {
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 50px;
+        }
+        .mockup-container {
+            background: white;
+            padding: 10px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            transform: translateY(40px);
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-white py-3 shadow-sm fixed-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-primary" href="#">
+                <i class="bi bi-building"></i> SmartResidencial
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item"><a class="nav-link" href="#beneficios">Beneficios</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#modulos">Módulos</a></li>
+                    <li class="nav-item ms-lg-3">
+                        <a href="{% url 'login' %}" class="btn btn-outline-primary fw-bold px-4 rounded-pill">Iniciar Sesión</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero-section text-center mt-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <span class="badge bg-light text-primary mb-3 px-3 py-2 rounded-pill shadow-sm">El software #1 para Condominios</span>
+                    <h1 class="display-4 fw-bold mb-4">Gestión Residencial Transparente y Sin Estrés</h1>
+                    <p class="lead mb-5 opacity-75">
+                        Olvídate de los Excels y los conflictos. Automatiza cobros, transparenta los gastos, reduce la morosidad y gestiona las áreas sociales desde una sola plataforma fácil de usar.
+                    </p>
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <a href="https://wa.me/18090000000?text=Hola,%20me%20interesa%20un%20demo%20del%20sistema%20residencial" target="_blank" class="btn btn-light text-primary btn-cta shadow">
+                            Solicitar un Demo Gratis
+                        </a>
+                        <a href="#beneficios" class="btn btn-outline-light btn-cta">Descubre Cómo</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div style="height: 60px; background-color: #f8f9fa;"></div>
+
+    <section id="beneficios" class="py-5 bg-light">
+        <div class="container py-5">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold">Todo lo que tu junta de vecinos necesita</h2>
+                <p class="text-muted">Diseñado para ahorrarle horas de trabajo al administrador y darle paz mental a los residentes.</p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-4 text-center">
+                    <div class="card border-0 shadow-sm h-100 p-4">
+                        <div class="feature-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                        <h4 class="fw-bold">Transparencia Total</h4>
+                        <p class="text-muted">Gráficos claros de en qué se gasta cada centavo. Genera reportes financieros listos para proyectar en las asambleas.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="card border-0 shadow-sm h-100 p-4">
+                        <div class="feature-icon"><i class="bi bi-shield-check"></i></div>
+                        <h4 class="fw-bold">Cero Morosidad</h4>
+                        <p class="text-muted">Reportes de antigüedad de deuda (Aging) y estados de cuenta individuales en PDF. Bloquea reservas a vecinos morosos automáticamente.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="card border-0 shadow-sm h-100 p-4">
+                        <div class="feature-icon"><i class="bi bi-whatsapp"></i></div>
+                        <h4 class="fw-bold">Listo para WhatsApp</h4>
+                        <p class="text-muted">Exporta reportes de consumo de gas y recibos de pago con formatos optimizados para enviarlos al grupo del residencial.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="modulos" class="py-5">
+        <div class="container py-5">
+            <div class="row align-items-center mb-5">
+                <div class="col-lg-6 mb-4 mb-lg-0">
+                    <div class="bg-light p-4 rounded-4 shadow-sm text-center">
+                        <h1 class="display-1 text-primary"><i class="bi bi-calendar-check"></i></h1>
+                    </div>
+                </div>
+                <div class="col-lg-6 ps-lg-5">
+                    <h2 class="fw-bold mb-3">Reservas de Áreas Sociales</h2>
+                    <p class="text-muted fs-5 mb-4">Se acabaron los choques de horarios en la piscina o el gazebo. Cada residente reserva desde su celular.</p>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Calendario visual de disponibilidad en tiempo real.</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Reglas automáticas: horas máximas y días de anticipación.</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Bloqueo automático para usuarios con cuotas vencidas.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="row align-items-center flex-row-reverse">
+                <div class="col-lg-6 mb-4 mb-lg-0">
+                    <div class="bg-light p-4 rounded-4 shadow-sm text-center">
+                        <h1 class="display-1 text-danger"><i class="bi bi-tools"></i></h1>
+                    </div>
+                </div>
+                <div class="col-lg-6 pe-lg-5">
+                    <h2 class="fw-bold mb-3">Tickets y Averías</h2>
+                    <p class="text-muted fs-5 mb-4">Centraliza los problemas del edificio. Si hay una fuga o el portón no abre, los vecinos lo reportan al instante.</p>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Los vecinos suben fotos de la incidencia.</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> El administrador recibe y gestiona el estado del ticket.</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Historial de mantenimiento del edificio guardado.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="bg-primary text-white text-center py-5">
+        <div class="container py-5">
+            <h2 class="fw-bold mb-4">¿Listo para profesionalizar tu condominio?</h2>
+            <p class="fs-5 mb-4 opacity-75">Agenda una demostración guiada y descubre cómo podemos adaptar el sistema a tu residencial.</p>
+            <a href="https://wa.me/18090000000?text=Hola,%20me%20interesa%20un%20demo%20del%20sistema%20residencial" target="_blank" class="btn btn-light text-primary btn-cta shadow-lg">
+                <i class="bi bi-whatsapp"></i> Hablemos por WhatsApp
+            </a>
+        </div>
+    </section>
+
+    <footer class="bg-dark text-white py-4 text-center">
+        <div class="container">
+            <p class="mb-0 text-white-50">&copy; 2026 SmartResidencial. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
