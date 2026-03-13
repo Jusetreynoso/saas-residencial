@@ -4,8 +4,10 @@ from . import views
 
 
 urlpatterns = [
+
+    path('', views.landing_page, name='landing_page'),
     # Dashboard principal
-    path('', views.dashboard, name='dashboard'),
+    path('dashboard/', views.dashboard, name='dashboard'),
     
     # Crear reserva (Residente)
     path('reservar/', views.crear_reserva, name='crear_reserva'),
