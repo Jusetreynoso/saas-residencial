@@ -994,6 +994,8 @@ def cambiar_clave_vecino(request, user_id):
 
 # En core/views.py
 
+from decimal import Decimal
+
 @login_required
 def aplicar_moras(request):
     if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
@@ -1001,30 +1003,34 @@ def aplicar_moras(request):
 
     residencial = request.user.residencial
     hoy = timezone.now().date()
-    porcentaje = residencial.porcentaje_mora or 0
+    
+    # 1. Blindaje del porcentaje (Aseguramos que sea un número Decimal perfecto)
+    porcentaje_str = str(residencial.porcentaje_mora or 0)
+    porcentaje = Decimal(porcentaje_str)
     
     if porcentaje <= 0:
-        messages.warning(request, "⚠️ No tienes configurado el porcentaje de mora en el Residencial.")
+        messages.warning(request, "⚠️ No tienes configurado el porcentaje de mora en la configuración del Residencial.")
         return redirect('dashboard')
 
-    # 1. Buscamos SOLO facturas de MANTENIMIENTO que se deban
+    # 2. Buscar facturas vencidas de mantenimiento (Tienen que ser 'CUOTA' y estar 'PENDIENTE')
     facturas_pendientes = Factura.objects.filter(
         residencial=residencial,
-        tipo='CUOTA',           # <--- OJO: Solo aplica a cuotas, no a Gas ni otros
-        estado='PENDIENTE',     # Que no estén pagadas
-        fecha_vencimiento__lt=hoy # Que ya hayan vencido
+        tipo='CUOTA',
+        estado='PENDIENTE',
+        fecha_vencimiento__lt=hoy
     )
     
-    contador = 0
+    contador_aplicadas = 0
+    total_vencidas = facturas_pendientes.count() # Contamos cuántas encontró realmente
 
     for factura in facturas_pendientes:
         aplicar = False
         
-        # CASO 1: Nunca se le ha cobrado mora (es la primera vez)
+        # CASO A: Nunca se le ha cobrado mora (aplica de inmediato porque ya venció)
         if factura.fecha_ultima_mora is None:
             aplicar = True
             
-        # CASO 2: Ya se le cobró, pero verificamos si pasaron 30 días desde la última vez
+        # CASO B: Ya tiene mora previa, verificamos si ya pasaron los 30 días
         else:
             dias_pasados = (hoy - factura.fecha_ultima_mora).days
             if dias_pasados >= 30:
@@ -1032,25 +1038,24 @@ def aplicar_moras(request):
 
         # --- APLICAMOS EL CASTIGO ---
         if aplicar:
-            # Calculamos la mora sobre el SALDO PENDIENTE (lo justo) o sobre el MONTO ORIGINAL
-            # Aquí uso saldo_pendiente para que sea interés sobre deuda actual.
-            recargo = factura.saldo_pendiente * (porcentaje / 100)
+            # Cálculo matemático protegido (Decimal * Decimal)
+            recargo = factura.saldo_pendiente * (porcentaje / Decimal('100'))
             
-            # Actualizamos valores
             factura.monto += recargo
             factura.saldo_pendiente += recargo
-            factura.concepto += f" (+{porcentaje}%)" # Agregamos marca al texto
-            
-            # IMPORTANTE: Guardamos la fecha de HOY para que no le vuelva a cobrar hasta dentro de 30 días
+            factura.concepto += f" (+{porcentaje}% Mora)"
             factura.fecha_ultima_mora = hoy 
             
             factura.save()
-            contador += 1
+            contador_aplicadas += 1
 
-    if contador > 0:
-        messages.success(request, f"✅ Se aplicó mora acumulativa a {contador} facturas de mantenimiento.")
+    # --- 3. MENSAJES INTELIGENTES DE RESPUESTA ---
+    if contador_aplicadas > 0:
+        messages.success(request, f"✅ ¡Éxito! Se calculó y aplicó mora a {contador_aplicadas} cuotas vencidas.")
+    elif total_vencidas > 0:
+        messages.info(request, f"⏳ El sistema detectó {total_vencidas} facturas vencidas, pero a ninguna le toca mora hoy (aún no cumplen los 30 días exactos desde su última mora).")
     else:
-        messages.info(request, "ℹ️ No hay facturas que cumplan el ciclo de mora hoy (o ya se les aplicó este mes).")
+        messages.warning(request, "🕵️‍♂️ El sistema NO encontró facturas de mantenimiento vencidas. Revisa que las cuotas pendientes sean del tipo 'Mantenimiento' y que su fecha de vencimiento ya haya pasado.")
 
     return redirect('dashboard')
 
