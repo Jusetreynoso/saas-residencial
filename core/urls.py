@@ -82,4 +82,7 @@ urlpatterns = [
     path('reportes/morosidad/', views.reporte_morosidad, name='reporte_morosidad'),
 
     path('reportes/transparencia/', views.reporte_transparencia, name='reporte_transparencia'),
+
+    # RUTA DE LA BITÁCORA DE AUDITORÍA
+    path('auditoria/', views.ver_bitacora, name='ver_bitacora'),
 ]

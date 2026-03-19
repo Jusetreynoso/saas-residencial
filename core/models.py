@@ -340,3 +340,21 @@ class IngresoExtraordinario(models.Model):
         return f"{self.concepto_detalle} - {self.monto} (Apto {self.Apartamento.numero})"
     
 
+class Bitacora(models.Model):
+    NIVELES = [
+        ('INFO', 'Información'),
+        ('WARNING', 'Advertencia/Modificación'),
+        ('DANGER', 'Crítico/Eliminación')
+    ]
+
+    residencial = models.ForeignKey('Residencial', on_delete=models.CASCADE)
+    usuario = models.ForeignKey('Usuario', on_delete=models.SET_NULL, null=True, blank=True, help_text="Quién hizo la acción")
+    modulo = models.CharField(max_length=50) # Ej: 'FINANZAS', 'SISTEMA', 'RESERVAS'
+    accion = models.TextField() # Ej: 'Registró un pago de $5,000 al apto 202'
+    nivel = models.CharField(max_length=20, choices=NIVELES, default='INFO')
+    fecha = models.DateTimeField(auto_now_add=True) # Guarda la fecha y hora exacta automáticamente
+
+    def __str__(self):
+        return f"{self.fecha.strftime('%d/%m/%Y %H:%M')} - {self.usuario} - {self.accion}"
+    
+

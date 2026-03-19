@@ -27,7 +27,7 @@ from .forms import (
     IngresoExtraForm
 )
 
-from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia, ReportePago, IngresoExtraordinario
+from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia, ReportePago, IngresoExtraordinario, Bitacora
 from django.db.models import Sum, Max, Count, Q
 from django.db.models.functions import TruncMonth
 from itertools import chain
@@ -1221,11 +1221,32 @@ def gestionar_reportes_pago(request):
                 reporte.comentario_admin = f"Pago aplicado a {filtro_tipo}. Se pagaron {facturas_pagadas} facturas."
                 reporte.save()
 
+                # ---> 👁️ BITÁCORA: REGISTRO DE APROBACIÓN <---
+                Bitacora.objects.create(
+                    residencial=request.user.residencial,
+                    usuario=request.user,
+                    modulo='FINANZAS',
+                    accion=f"Aprobó un pago de ${reporte.monto} reportado por {vecino.first_name} {vecino.last_name}.",
+                    nivel='INFO'
+                )
+                # ----------------------------------------------
+
                 messages.success(request, f"Pago de {vecino.first_name} aplicado exitosamente {msg_extra}")
                 
             elif accion == 'rechazar':
                 reporte.estado = 'RECHAZADO'
                 reporte.save()
+                
+                # ---> 👁️ BITÁCORA: REGISTRO DE RECHAZO <---
+                Bitacora.objects.create(
+                    residencial=request.user.residencial,
+                    usuario=request.user,
+                    modulo='FINANZAS',
+                    accion=f"Rechazó un comprobante de pago de ${reporte.monto} enviado por {reporte.usuario.first_name}.",
+                    nivel='WARNING'
+                )
+                # ----------------------------------------------
+                
                 messages.warning(request, "Reporte de pago rechazado.")
             
             return redirect('gestionar_reportes_pago')
@@ -1761,3 +1782,16 @@ def landing_page(request):
         return redirect('dashboard')
         
     return render(request, 'core/landing.html')
+
+
+@login_required
+def ver_bitacora(request):
+    # Opcional: Puedes dejar que el ADMIN_RESIDENCIAL lo vea, o restringirlo SOLO a SUPERADMIN
+    # Por ahora dejaremos que el Admin del edificio también vea quién de su equipo hizo qué.
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+        
+    # Traemos los últimos 200 movimientos para no sobrecargar la pantalla
+    logs = Bitacora.objects.filter(residencial=request.user.residencial).order_by('-fecha')[:200]
+    
+    return render(request, 'core/bitacora.html', {'logs': logs})
