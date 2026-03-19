@@ -1449,6 +1449,12 @@ def reporte_mensual_dinamico(request):
 
     # --- LÓGICA DE CUADRE DE BANCO (POST) ---
     if request.method == 'POST' and 'cuadrar_banco' in request.POST:
+        
+        # 🛡️ NUEVA PROTECCIÓN: Solo TÚ (SuperAdmin) puedes ejecutar esto
+        if not request.user.is_superuser:
+            messages.error(request, "⛔ Acción denegada. El cuadre de banco es una herramienta de soporte técnico exclusiva del administrador de la plataforma.")
+            return redirect(f"{request.path}?mes={mes_seleccionado}&anio={anio_seleccionado}")
+
         balance_real = Decimal(request.POST.get('balance_real', 0))
         balance_sistema = Decimal(request.POST.get('balance_sistema', 0))
         
@@ -1466,6 +1472,7 @@ def reporte_mensual_dinamico(request):
         
         # Recargar la misma página con el mismo mes y año
         return redirect(f"{request.path}?mes={mes_seleccionado}&anio={anio_seleccionado}")
+    # ----------------------------------------
     # ----------------------------------------
 
     # 2. CÁLCULO DE INGRESOS DEL PERIODO
