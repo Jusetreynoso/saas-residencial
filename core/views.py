@@ -1005,11 +1005,6 @@ def cambiar_clave_vecino(request, user_id):
 
     return render(request, 'core/vecino_password_form.html', {'form': form, 'vecino': vecino})
 
-# En core/views.py
-
-# En core/views.py
-
-from decimal import Decimal
 
 @login_required
 def aplicar_moras(request):
@@ -1019,7 +1014,6 @@ def aplicar_moras(request):
     residencial = request.user.residencial
     hoy = timezone.now().date()
     
-    # 1. Blindaje del porcentaje (Aseguramos que sea un número Decimal perfecto)
     porcentaje_str = str(residencial.porcentaje_mora or 0)
     porcentaje = Decimal(porcentaje_str)
     
@@ -1027,7 +1021,7 @@ def aplicar_moras(request):
         messages.warning(request, "⚠️ No tienes configurado el porcentaje de mora en la configuración del Residencial.")
         return redirect('dashboard')
 
-    # 2. Buscar facturas vencidas de mantenimiento (Tienen que ser 'CUOTA' y estar 'PENDIENTE')
+    # 1. Buscar TODAS las facturas vencidas de Mantenimiento
     facturas_pendientes = Factura.objects.filter(
         residencial=residencial,
         tipo='CUOTA',
@@ -1036,24 +1030,28 @@ def aplicar_moras(request):
     )
     
     contador_aplicadas = 0
-    total_vencidas = facturas_pendientes.count() # Contamos cuántas encontró realmente
+    total_vencidas = facturas_pendientes.count()
 
     for factura in facturas_pendientes:
         aplicar = False
         
-        # CASO A: Nunca se le ha cobrado mora (aplica de inmediato porque ya venció)
+        # CASO A: Es la primera vez que se le aplica mora
         if factura.fecha_ultima_mora is None:
             aplicar = True
             
-        # CASO B: Ya tiene mora previa, verificamos si ya pasaron los 30 días
+        # CASO B: Ya tiene mora, verificamos si YA SE LE COBRÓ ESTE MES
         else:
-            dias_pasados = (hoy - factura.fecha_ultima_mora).days
-            if dias_pasados >= 30:
-                aplicar = True
+            # Si estamos en un mes diferente al de su última mora
+            if factura.fecha_ultima_mora.month != hoy.month or factura.fecha_ultima_mora.year != hoy.year:
+                # Salvaguarda: Que hayan pasado al menos 20 días desde la última vez.
+                # Esto evita que un administrador le dé al botón el 31 de marzo y luego el 1 de abril por error.
+                dias_pasados = (hoy - factura.fecha_ultima_mora).days
+                if dias_pasados >= 20: 
+                    aplicar = True
 
-        # --- APLICAMOS EL CASTIGO ---
+        # --- APLICAMOS EL CASTIGO (Interés Compuesto) ---
         if aplicar:
-            # Cálculo matemático protegido (Decimal * Decimal)
+            # El cálculo se hace sobre el saldo pendiente actual (incluye moras viejas)
             recargo = factura.saldo_pendiente * (porcentaje / Decimal('100'))
             
             factura.monto += recargo
@@ -1062,15 +1060,26 @@ def aplicar_moras(request):
             factura.fecha_ultima_mora = hoy 
             
             factura.save()
+            
+            # ---> 👁️ BITÁCORA: REGISTRO DE CASTIGO AUTOMÁTICO <---
+            Bitacora.objects.create(
+                residencial=residencial,
+                usuario=request.user,
+                modulo='FINANZAS/MORAS',
+                accion=f"Aplicó mora de ${recargo:,.2f} a la cuota vencida de {factura.usuario.first_name} (Apto {factura.usuario.apartamento.numero if factura.usuario.apartamento else 'S/A'}).",
+                nivel='WARNING'
+            )
+            # ----------------------------------------------------
+            
             contador_aplicadas += 1
 
-    # --- 3. MENSAJES INTELIGENTES DE RESPUESTA ---
+    # --- MENSAJES DE RESPUESTA ---
     if contador_aplicadas > 0:
         messages.success(request, f"✅ ¡Éxito! Se calculó y aplicó mora a {contador_aplicadas} cuotas vencidas.")
     elif total_vencidas > 0:
-        messages.info(request, f"⏳ El sistema detectó {total_vencidas} facturas vencidas, pero a ninguna le toca mora hoy (aún no cumplen los 30 días exactos desde su última mora).")
+        messages.info(request, f"⏳ El sistema detectó {total_vencidas} facturas vencidas, pero ya se les aplicó su mora correspondiente en este mes calendario.")
     else:
-        messages.warning(request, "🕵️‍♂️ El sistema NO encontró facturas de mantenimiento vencidas. Revisa que las cuotas pendientes sean del tipo 'Mantenimiento' y que su fecha de vencimiento ya haya pasado.")
+        messages.warning(request, "🕵️‍♂️ El sistema NO encontró facturas de mantenimiento vencidas.")
 
     return redirect('dashboard')
 
