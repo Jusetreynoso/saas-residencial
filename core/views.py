@@ -522,6 +522,10 @@ def registrar_pago(request, factura_id):
         # 1. Registramos el pago acumulado
         factura.monto_pagado = (factura.monto_pagado or 0) + monto_recibido
         
+        # Guardamos datos para la bitácora antes de modificar los saldos
+        vecino = factura.usuario
+        numero_apto = vecino.apartamento.numero if vecino.apartamento else "S/A"
+        
         # CASO A: Pagó la deuda completa (o pagó de más)
         if monto_recibido >= deuda_actual:
             factura.estado = 'PAGADO'
@@ -532,24 +536,18 @@ def registrar_pago(request, factura_id):
             sobrante = monto_recibido - deuda_actual
             
             if sobrante > 0:
-                vecino = factura.usuario
-                
-                # --- CORRECCIÓN CLAVE: DETECTAMOS EL BOLSILLO AUTOMÁTICAMENTE ---
                 bolsillo_nombre = ""
                 
                 if factura.tipo == 'GAS':
-                    # Si la factura era de Gas, el vuelto va al saldo de Gas
                     saldo_actual = vecino.saldo_favor_gas or Decimal(0)
                     vecino.saldo_favor_gas = saldo_actual + sobrante
                     bolsillo_nombre = "Gas"
                 else:
-                    # Si era Cuota o Mantenimiento, va al saldo de Mantenimiento
                     saldo_actual = vecino.saldo_favor_mantenimiento or Decimal(0)
                     vecino.saldo_favor_mantenimiento = saldo_actual + sobrante
                     bolsillo_nombre = "Mantenimiento"
                 
-                vecino.save() # Guardamos el saldo en el vecino
-                
+                vecino.save()
                 messages.success(request, f"✅ Pagado. Se abonaron ${sobrante:,.2f} al saldo de {bolsillo_nombre} de {vecino.first_name}.")
             else:
                 messages.success(request, f"✅ Factura pagada correctamente (Exacto).")
@@ -557,10 +555,19 @@ def registrar_pago(request, factura_id):
         # CASO B: Pago Parcial (Abono)
         else:
             factura.saldo_pendiente = deuda_actual - monto_recibido
-            # Si es parcial, no tocamos fechas de pago final ni estados de pagado
             messages.warning(request, f"💰 Abono registrado. Restan por pagar: ${factura.saldo_pendiente:,.2f}")
 
         factura.save()
+        
+        # ---> 👁️ BITÁCORA: REGISTRO DE COBRO DIRECTO <---
+        Bitacora.objects.create(
+            residencial=request.user.residencial,
+            usuario=request.user,
+            modulo='FINANZAS',
+            accion=f"Registró un pago/abono manual de ${monto_recibido:,.2f} a la factura de {vecino.first_name} {vecino.last_name} (Apto {numero_apto}).",
+            nivel='INFO'
+        )
+        # ----------------------------------------------
         
     return redirect('cuentas_por_cobrar')
 
