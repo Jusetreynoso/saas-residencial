@@ -244,16 +244,14 @@ def cancelar_reserva(request, reserva_id):
         messages.error(request, "No tienes permiso para cancelar esta reserva.")
         return redirect('dashboard')
 
-    # Guardamos datos clave antes de borrarla (para el mensaje)
+    # Guardamos datos clave antes de borrarla
     fecha_reserva = reserva.fecha_solicitud
     nombre_area = reserva.area_social.nombre
     estado_anterior = reserva.estado
     usuario_reserva = reserva.usuario
 
     # 3. Lógica de "Aviso al Admin"
-    # Si es el VECINO quien cancela una reserva que ya estaba APROBADA
     if es_dueno and not es_admin and estado_anterior == 'APROBADA':
-        # Creamos una Incidencia automática para avisar al admin
         Incidencia.objects.create(
             residencial=request.user.residencial,
             usuario=request.user,
@@ -264,6 +262,16 @@ def cancelar_reserva(request, reserva_id):
         msg_extra = " Se ha notificado al administrador."
     else:
         msg_extra = ""
+
+    # ---> 👁️ BITÁCORA: REGISTRO DE CANCELACIÓN <---
+    Bitacora.objects.create(
+        residencial=request.user.residencial,
+        usuario=request.user,
+        modulo='RESERVAS',
+        accion=f"Canceló/Eliminó la reserva de {usuario_reserva.first_name} en {nombre_area} para el {fecha_reserva}.",
+        nivel='WARNING'
+    )
+    # ----------------------------------------------
 
     # 4. Borramos la reserva (Liberamos el calendario)
     reserva.delete()
@@ -1471,7 +1479,7 @@ def reporte_mensual_dinamico(request):
     # --- LÓGICA DE CUADRE DE BANCO (POST) ---
     if request.method == 'POST' and 'cuadrar_banco' in request.POST:
         
-        # 🛡️ NUEVA PROTECCIÓN: Solo TÚ (SuperAdmin) puedes ejecutar esto
+        # 🛡️ PROTECCIÓN: Solo TÚ (SuperAdmin) puedes ejecutar esto
         if not request.user.is_superuser:
             messages.error(request, "⛔ Acción denegada. El cuadre de banco es una herramienta de soporte técnico exclusiva del administrador de la plataforma.")
             return redirect(f"{request.path}?mes={mes_seleccionado}&anio={anio_seleccionado}")
@@ -1482,16 +1490,25 @@ def reporte_mensual_dinamico(request):
         diferencia = balance_real - balance_sistema
         
         if diferencia != 0:
-            # Ajustamos el saldo inicial del residencial para cuadrar la matemática global
+            # Ajustamos el saldo inicial del residencial
             residencial.saldo_inicial += diferencia
             residencial.save()
+            
+            # ---> 👁️ BITÁCORA: ALERTA CRÍTICA DE ALTERACIÓN DE SALDO <---
+            Bitacora.objects.create(
+                residencial=residencial,
+                usuario=request.user,
+                modulo='SISTEMA/FINANZAS',
+                accion=f"FORZÓ CUADRE DE BANCO. Aplicó un ajuste de ${diferencia:,.2f} al saldo base del residencial.",
+                nivel='DANGER'
+            )
+            # ------------------------------------------------------------
             
             if diferencia > 0:
                 messages.success(request, f"✅ Banco cuadrado. Se sumaron ${diferencia:,.2f} al sistema.")
             else:
                 messages.warning(request, f"✅ Banco cuadrado. Se restaron ${abs(diferencia):,.2f} al sistema.")
         
-        # Recargar la misma página con el mismo mes y año
         return redirect(f"{request.path}?mes={mes_seleccionado}&anio={anio_seleccionado}")
     # ----------------------------------------
     # ----------------------------------------
