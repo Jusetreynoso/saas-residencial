@@ -229,6 +229,11 @@ class EditarVecinoForm(forms.ModelForm):
             'apartamento': forms.Select(attrs={'class': 'form-select'}),
         }
 
+    def __init__(self, admin_user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if admin_user and admin_user.residencial:
+            self.fields['apartamento'].queryset = Apartamento.objects.filter(residencial=admin_user.residencial)
+
 
 class AbonoForm(forms.Form):
     usuario = forms.ModelChoiceField(
@@ -284,3 +289,8 @@ class IngresoExtraForm(forms.ModelForm):
             'monto': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'comprobante': forms.TextInput(attrs={'class': 'form-control'}),
         }
+
+    def __init__(self, admin_user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if admin_user and admin_user.residencial:
+            self.fields['Apartamento'].queryset = Apartamento.objects.filter(residencial=admin_user.residencial)

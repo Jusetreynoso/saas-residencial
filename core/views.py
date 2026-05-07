@@ -234,7 +234,7 @@ def api_eventos(request):
 @login_required
 def cancelar_reserva(request, reserva_id):
     # 1. Buscamos la reserva
-    reserva = get_object_or_404(Reserva, pk=reserva_id)
+    reserva = get_object_or_404(Reserva, pk=reserva_id, residencial=request.user.residencial)
 
     # 2. Seguridad: Solo el dueño o el Admin pueden cancelar
     es_admin = request.user.rol in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']
@@ -824,7 +824,7 @@ def borrar_aviso(request, aviso_id):
 
 @login_required
 def ver_recibo(request, factura_id):
-    factura = get_object_or_404(Factura, pk=factura_id)
+    factura = get_object_or_404(Factura, pk=factura_id, residencial=request.user.residencial)
 
     es_dueno = (factura.usuario == request.user)
     es_admin = (request.user.rol in ['ADMIN_RESIDENCIAL', 'SUPERADMIN'] and request.user.residencial == factura.residencial)
@@ -968,13 +968,13 @@ def editar_vecino(request, user_id):
     vecino = get_object_or_404(Usuario, pk=user_id, residencial=request.user.residencial)
 
     if request.method == 'POST':
-        form = EditarVecinoForm(request.POST, instance=vecino)
+        form = EditarVecinoForm(request.user, request.POST, instance=vecino)
         if form.is_valid():
             form.save()
             messages.success(request, f"✅ Datos de {vecino.first_name} actualizados.")
             return redirect('lista_vecinos')
     else:
-        form = EditarVecinoForm(instance=vecino)
+        form = EditarVecinoForm(request.user, instance=vecino)
 
     return render(request, 'core/vecino_form_edit.html', {'form': form, 'vecino': vecino})
 
@@ -1095,7 +1095,7 @@ def registrar_abono(request):
         concepto = request.POST.get('concepto')
         tipo_pago = request.POST.get('tipo_pago') # 'GAS' o 'MANTENIMIENTO'
 
-        vecino = get_object_or_404(Usuario, pk=usuario_id)
+        vecino = get_object_or_404(Usuario, pk=usuario_id, residencial=request.user.residencial)
         monto_disponible = monto
 
         # 1. INTENTAR PAGAR DEUDAS EXISTENTES PRIMERO
@@ -1337,7 +1337,7 @@ def balance_residencial(request):
 @login_required
 def registrar_ingreso_extraordinario(request):
     if request.method == 'POST':
-        form = IngresoExtraForm(request.POST)
+        form = IngresoExtraForm(request.user, request.POST)
         if form.is_valid():
             ingreso = form.save(commit=False)
             # ELIMINAMOS LA LÍNEA: ingreso.residencial = ... (NO EXISTE)
@@ -1346,7 +1346,7 @@ def registrar_ingreso_extraordinario(request):
             messages.success(request, "¡Ingreso extraordinario registrado con éxito!")
             return redirect('dashboard')
     else:
-        form = IngresoExtraForm()
+        form = IngresoExtraForm(request.user)
     
     return render(request, 'core/registrar_ingreso_extra.html', {'form': form})
 
