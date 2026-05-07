@@ -28,10 +28,12 @@ from .forms import (
 )
 
 from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia, ReportePago, IngresoExtraordinario, Bitacora
-from django.db.models import Sum, Max, Count, Q
-from django.db.models.functions import TruncMonth
+from django.db.models import Sum, Max, Count, Q, F, Case, When, Value
+from django.db.models.functions import TruncMonth, Coalesce
 from itertools import chain
 from operator import attrgetter
+
+from .services import procesar_pago_fifo
 
 
 # ---------------------------------------------
@@ -80,10 +82,11 @@ def dashboard(request):
         # MÓDULO DE FINANZAS
         mis_facturas = Factura.objects.filter(usuario=user).order_by('-fecha_emision')
         context['mis_facturas'] = mis_facturas
-        context['total_pendiente'] = sum(
-            (f.saldo_pendiente if f.saldo_pendiente is not None else f.monto) 
-            for f in mis_facturas if f.estado == 'PENDIENTE'
-        )
+        context['total_pendiente'] = Factura.objects.filter(
+            usuario=user, estado='PENDIENTE'
+        ).aggregate(
+            suma=Coalesce(Sum(Coalesce('saldo_pendiente', 'monto')), Decimal('0.00'))
+        )['suma']
 
     else:
         context['mensaje'] = "Usuario sin residencial asignado."
@@ -495,7 +498,7 @@ def cuentas_por_cobrar(request):
         estado='PENDIENTE'
     ).order_by('usuario__apartamento__numero')
     
-    total_por_cobrar = sum(f.monto for f in deudas)
+    total_por_cobrar = deudas.aggregate(suma=Coalesce(Sum('monto'), Decimal('0.00')))['suma']
 
     return render(request, 'core/cuentas_por_cobrar.html', {
         'deudas': deudas,
@@ -516,55 +519,24 @@ def registrar_pago(request, factura_id):
             messages.error(request, "⚠️ El monto debe ser mayor a 0.")
             return redirect('cuentas_por_cobrar')
 
-        # Calculamos cuánto falta por pagar realmente
-        deuda_actual = factura.saldo_pendiente if factura.saldo_pendiente is not None else factura.monto
-        
-        # 1. Registramos el pago acumulado
-        factura.monto_pagado = (factura.monto_pagado or 0) + monto_recibido
-        
-        # Guardamos datos para la bitácora antes de modificar los saldos
+        # Guardamos datos para la bitácora
         vecino = factura.usuario
         numero_apto = vecino.apartamento.numero if vecino.apartamento else "S/A"
         
-        # CASO A: Pagó la deuda completa (o pagó de más)
-        if monto_recibido >= deuda_actual:
-            factura.estado = 'PAGADO'
-            factura.saldo_pendiente = 0
-            factura.fecha_pago = timezone.now().date()
-            
-            # Calculamos si sobró dinero
-            sobrante = monto_recibido - deuda_actual
-            
-            if sobrante > 0:
-                bolsillo_nombre = ""
-                
-                if factura.tipo == 'GAS':
-                    saldo_actual = vecino.saldo_favor_gas or Decimal(0)
-                    vecino.saldo_favor_gas = saldo_actual + sobrante
-                    bolsillo_nombre = "Gas"
-                else:
-                    saldo_actual = vecino.saldo_favor_mantenimiento or Decimal(0)
-                    vecino.saldo_favor_mantenimiento = saldo_actual + sobrante
-                    bolsillo_nombre = "Mantenimiento"
-                
-                vecino.save()
-                messages.success(request, f"✅ Pagado. Se abonaron ${sobrante:,.2f} al saldo de {bolsillo_nombre} de {vecino.first_name}.")
-            else:
-                messages.success(request, f"✅ Factura pagada correctamente (Exacto).")
-
-        # CASO B: Pago Parcial (Abono)
+        # ---> DELEGAMOS LA LÓGICA AL SERVICIO FIFO <---
+        resultado = procesar_pago_fifo(usuario=vecino, monto=monto_recibido, tipo_pago=factura.tipo)
+        
+        if resultado['sobrante'] > 0:
+            messages.success(request, f"✅ Pagado. Se abonaron ${resultado['sobrante']:,.2f} al saldo de {resultado['bolsillo_afectado']} de {vecino.first_name}.")
         else:
-            factura.saldo_pendiente = deuda_actual - monto_recibido
-            messages.warning(request, f"💰 Abono registrado. Restan por pagar: ${factura.saldo_pendiente:,.2f}")
-
-        factura.save()
+            messages.success(request, f"✅ Pago registrado correctamente.")
         
         # ---> 👁️ BITÁCORA: REGISTRO DE COBRO DIRECTO <---
         Bitacora.objects.create(
             residencial=request.user.residencial,
             usuario=request.user,
             modulo='FINANZAS',
-            accion=f"Registró un pago/abono manual de ${monto_recibido:,.2f} a la factura de {vecino.first_name} {vecino.last_name} (Apto {numero_apto}).",
+            accion=f"Registró un pago/abono manual de ${monto_recibido:,.2f} a las facturas de {vecino.first_name} {vecino.last_name} (Apto {numero_apto}).",
             nivel='INFO'
         )
         # ----------------------------------------------
@@ -1096,54 +1068,16 @@ def registrar_abono(request):
         tipo_pago = request.POST.get('tipo_pago') # 'GAS' o 'MANTENIMIENTO'
 
         vecino = get_object_or_404(Usuario, pk=usuario_id, residencial=request.user.residencial)
-        monto_disponible = monto
+        # ---> DELEGAMOS LA LÓGICA AL SERVICIO FIFO <---
+        resultado = procesar_pago_fifo(usuario=vecino, monto=monto, tipo_pago=tipo_pago)
 
-        # 1. INTENTAR PAGAR DEUDAS EXISTENTES PRIMERO
-        filtro_tipo = 'GAS' if tipo_pago == 'GAS' else 'CUOTA'
-        
-        facturas_pendientes = Factura.objects.filter(
-            usuario=vecino,
-            estado='PENDIENTE',
-            tipo=filtro_tipo
-        ).order_by('fecha_vencimiento')
-
-        facturas_pagadas_count = 0
-
-        for factura in facturas_pendientes:
-            if monto_disponible <= 0: break
-
-            deuda = factura.saldo_pendiente
-            
-            if monto_disponible >= deuda:
-                monto_disponible -= deuda
-                factura.saldo_pendiente = 0
-                factura.monto_pagado = factura.monto
-                factura.estado = 'PAGADO'
-                factura.fecha_pago = timezone.now().date()
-                factura.save()
-                facturas_pagadas_count += 1
-            else:
-                factura.saldo_pendiente -= monto_disponible
-                factura.monto_pagado += monto_disponible
-                monto_disponible = 0
-                factura.save()
-
-        # 2. EL SOBRANTE (O EL TOTAL SI NO HABÍA DEUDA) VA AL SALDO A FAVOR
         msg_extra = ""
-        if monto_disponible > 0:
-            if tipo_pago == 'GAS':
-                vecino.saldo_favor_gas += monto_disponible
-                bolsillo = "Gas"
-            else:
-                vecino.saldo_favor_mantenimiento += monto_disponible
-                bolsillo = "Mantenimiento"
-            
-            vecino.save()
-            msg_extra = f"y se abonaron ${monto_disponible} al saldo de {bolsillo}."
+        if resultado['sobrante'] > 0:
+            msg_extra = f"y se abonaron ${resultado['sobrante']} al saldo de {resultado['bolsillo_afectado']}."
         else:
             msg_extra = "cubriendo deuda pendiente."
 
-        messages.success(request, f"✅ Abono registrado a {vecino}. Se pagaron {facturas_pagadas_count} facturas {msg_extra}")
+        messages.success(request, f"✅ Abono registrado a {vecino}. Se pagaron {resultado['facturas_pagadas']} facturas {msg_extra}")
         
         # Si venía del modal de cuentas por cobrar, volvemos allí. Si no, al dashboard.
         if 'next' in request.POST:
@@ -1193,56 +1127,17 @@ def gestionar_reportes_pago(request):
                 monto_disponible = reporte.monto
                 tipo_pago = reporte.tipo_pago  # ¿Qué está pagando?
 
-                # 1. FILTRO INTELIGENTE
-                # Si es GAS, buscamos facturas de GAS. Si es MANTENIMIENTO, buscamos CUOTAS.
-                filtro_tipo = 'GAS' if tipo_pago == 'GAS' else 'CUOTA'
-                
-                # Buscamos facturas viejas DE ESE TIPO
-                facturas_pendientes = Factura.objects.filter(
-                    usuario=vecino, 
-                    estado='PENDIENTE',
-                    tipo=filtro_tipo 
-                ).order_by('fecha_vencimiento')
+                # ---> DELEGAMOS LA LÓGICA AL SERVICIO FIFO <---
+                resultado = procesar_pago_fifo(usuario=vecino, monto=monto_disponible, tipo_pago=tipo_pago)
 
-                facturas_pagadas = 0
-
-                # Algoritmo Mata-Deudas (FIFO)
-                for factura in facturas_pendientes:
-                    if monto_disponible <= 0: break 
-
-                    deuda_factura = factura.saldo_pendiente
-
-                    if monto_disponible >= deuda_factura:
-                        monto_disponible -= deuda_factura
-                        factura.saldo_pendiente = 0
-                        factura.estado = 'PAGADO'
-                        factura.monto_pagado = factura.monto 
-                        factura.fecha_pago = timezone.now().date()
-                        factura.save()
-                        facturas_pagadas += 1
-                    else:
-                        factura.saldo_pendiente -= monto_disponible
-                        monto_disponible = 0 
-                        factura.save()
-                
-                # 2. EL SOBRANTE VA AL BOLSILLO CORRECTO
-                bolsillo_nombre = ""
-                if monto_disponible > 0:
-                    if tipo_pago == 'GAS':
-                        vecino.saldo_favor_gas += monto_disponible
-                        bolsillo_nombre = "GAS"
-                    else:
-                        # Mantenimiento u Otro va al saldo principal
-                        vecino.saldo_favor_mantenimiento += monto_disponible
-                        bolsillo_nombre = "MANTENIMIENTO"
-                    
-                    vecino.save()
-                    msg_extra = f"y sobraron ${monto_disponible} al saldo de {bolsillo_nombre}."
+                msg_extra = ""
+                if resultado['sobrante'] > 0:
+                    msg_extra = f"y sobraron ${resultado['sobrante']} al saldo de {resultado['bolsillo_afectado']}."
                 else:
                     msg_extra = "cubriendo deuda pendiente."
 
                 reporte.estado = 'APROBADO'
-                reporte.comentario_admin = f"Pago aplicado a {filtro_tipo}. Se pagaron {facturas_pagadas} facturas."
+                reporte.comentario_admin = f"Pago aplicado a {tipo_pago}. Se pagaron {resultado['facturas_pagadas']} facturas."
                 reporte.save()
 
                 # ---> 👁️ BITÁCORA: REGISTRO DE APROBACIÓN <---
@@ -1643,75 +1538,52 @@ def reporte_morosidad(request):
 
     residencial = request.user.residencial
     hoy = timezone.now().date()
+    hace_30 = hoy - timedelta(days=30)
+    hace_60 = hoy - timedelta(days=60)
+    hace_90 = hoy - timedelta(days=90)
     
-    vecinos = Usuario.objects.filter(residencial=residencial).order_by('apartamento__numero')
-    
+    # 1. ORM Mágico: Expresión para determinar deuda (saldo_pendiente si existe, sino monto)
+    deuda_expr = Coalesce('facturas__saldo_pendiente', 'facturas__monto')
+
+    # 2. Consultamos vecinos y anotamos (agrupamos) todas sus deudas directo en Base de Datos
+    vecinos_anotados = Usuario.objects.filter(
+        residencial=residencial, 
+        facturas__estado='PENDIENTE'
+    ).annotate(
+        deuda_total_calc=Coalesce(Sum(deuda_expr), Decimal('0.00')),
+        al_dia_calc=Coalesce(Sum(deuda_expr, filter=Q(facturas__fecha_vencimiento__gte=hoy)), Decimal('0.00')),
+        dias_30_calc=Coalesce(Sum(deuda_expr, filter=Q(facturas__fecha_vencimiento__lt=hoy, facturas__fecha_vencimiento__gte=hace_30)), Decimal('0.00')),
+        dias_60_calc=Coalesce(Sum(deuda_expr, filter=Q(facturas__fecha_vencimiento__lt=hace_30, facturas__fecha_vencimiento__gte=hace_60)), Decimal('0.00')),
+        dias_90_calc=Coalesce(Sum(deuda_expr, filter=Q(facturas__fecha_vencimiento__lt=hace_60, facturas__fecha_vencimiento__gte=hace_90)), Decimal('0.00')),
+        mas_90_calc=Coalesce(Sum(deuda_expr, filter=Q(facturas__fecha_vencimiento__lt=hace_90)), Decimal('0.00'))
+    ).filter(deuda_total_calc__gt=0).order_by('-deuda_total_calc')
+
     datos_morosidad = []
-    
-    # Acumuladores globales para el final de la tabla
     totales_globales = {
-        'al_dia': Decimal('0.00'),   # Debe dinero, pero aún no vence
-        'dias_30': Decimal('0.00'),  # 1 a 30 días vencido
-        'dias_60': Decimal('0.00'),  # 31 a 60 días vencido
-        'dias_90': Decimal('0.00'),  # 61 a 90 días vencido
-        'mas_90': Decimal('0.00'),   # Más de 90 días vencido (Crítico)
-        'total': Decimal('0.00')
+        'al_dia': Decimal('0.00'), 'dias_30': Decimal('0.00'), 'dias_60': Decimal('0.00'),
+        'dias_90': Decimal('0.00'), 'mas_90': Decimal('0.00'), 'total': Decimal('0.00')
     }
-    
-    for vecino in vecinos:
-        # Buscamos facturas que no estén pagadas
-        facturas_pendientes = Factura.objects.filter(usuario=vecino).exclude(estado='PAGADO')
-        
-        if not facturas_pendientes.exists():
-            continue # Si no debe nada, saltamos al siguiente vecino
-            
+
+    # 3. Ensamblamos el diccionario en un solo bucle rápido para el frontend
+    for v in vecinos_anotados:
         vecino_data = {
-            'usuario': vecino,
-            'apto': vecino.apartamento.numero if vecino.apartamento else 'S/A',
-            'al_dia': Decimal('0.00'),
-            'dias_30': Decimal('0.00'),
-            'dias_60': Decimal('0.00'),
-            'dias_90': Decimal('0.00'),
-            'mas_90': Decimal('0.00'),
-            'total': Decimal('0.00')
+            'usuario': v,
+            'apto': v.apartamento.numero if v.apartamento else 'S/A',
+            'al_dia': v.al_dia_calc,
+            'dias_30': v.dias_30_calc,
+            'dias_60': v.dias_60_calc,
+            'dias_90': v.dias_90_calc,
+            'mas_90': v.mas_90_calc,
+            'total': v.deuda_total_calc
         }
+        datos_morosidad.append(vecino_data)
         
-        for f in facturas_pendientes:
-            monto_deuda = f.saldo_pendiente if f.saldo_pendiente is not None else f.monto
-            if monto_deuda <= 0:
-                continue
-                
-            # Calculamos los días de atraso basados en la fecha de vencimiento
-            dias_vencidos = 0
-            if f.fecha_vencimiento and f.fecha_vencimiento < hoy:
-                dias_vencidos = (hoy - f.fecha_vencimiento).days
-                
-            # Asignamos el monto a la cubeta correspondiente
-            if dias_vencidos <= 0:
-                vecino_data['al_dia'] += monto_deuda
-                totales_globales['al_dia'] += monto_deuda
-            elif dias_vencidos <= 30:
-                vecino_data['dias_30'] += monto_deuda
-                totales_globales['dias_30'] += monto_deuda
-            elif dias_vencidos <= 60:
-                vecino_data['dias_60'] += monto_deuda
-                totales_globales['dias_60'] += monto_deuda
-            elif dias_vencidos <= 90:
-                vecino_data['dias_90'] += monto_deuda
-                totales_globales['dias_90'] += monto_deuda
-            else:
-                vecino_data['mas_90'] += monto_deuda
-                totales_globales['mas_90'] += monto_deuda
-                
-            vecino_data['total'] += monto_deuda
-            totales_globales['total'] += monto_deuda
-        
-        # Solo agregamos al vecino al reporte si su deuda total es mayor a 0
-        if vecino_data['total'] > 0:
-            datos_morosidad.append(vecino_data)
-            
-    # Ordenar la lista de mayor a menor deuda (los más críticos arriba)
-    datos_morosidad = sorted(datos_morosidad, key=lambda x: x['total'], reverse=True)
+        totales_globales['al_dia'] += v.al_dia_calc
+        totales_globales['dias_30'] += v.dias_30_calc
+        totales_globales['dias_60'] += v.dias_60_calc
+        totales_globales['dias_90'] += v.dias_90_calc
+        totales_globales['mas_90'] += v.mas_90_calc
+        totales_globales['total'] += v.deuda_total_calc
     
     context = {
         'datos_morosidad': datos_morosidad,
@@ -1745,8 +1617,13 @@ def reporte_transparencia(request):
     proyectado = facturas_mes.aggregate(Sum('monto'))['monto__sum'] or Decimal('0.00')
     
     # Calculamos cuánto de ese monto facturado ya entró al banco
-    recaudado = sum(f.monto - (f.saldo_pendiente if f.saldo_pendiente is not None else f.monto) for f in facturas_mes if f.estado == 'PENDIENTE')
-    recaudado += sum(f.monto for f in facturas_mes if f.estado == 'PAGADO')
+    recaudado_pendientes = facturas_mes.filter(estado='PENDIENTE').aggregate(
+        suma=Coalesce(Sum(F('monto') - Coalesce('saldo_pendiente', 'monto')), Decimal('0.00'))
+    )['suma']
+    recaudado_pagados = facturas_mes.filter(estado='PAGADO').aggregate(
+        suma=Coalesce(Sum('monto'), Decimal('0.00'))
+    )['suma']
+    recaudado = recaudado_pendientes + recaudado_pagados
 
     eficiencia = 0
     if proyectado > 0:
