@@ -7,21 +7,34 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
-        .fc-event { cursor: pointer; }
-        .fc-day-today { background-color: #f0f8ff !important; }
+        body { 
+            background-color: #f8f9fa; 
+            font-family: 'Inter', sans-serif;
+        }
         
-        /* Estilos para las tarjetas de menú */
-        .card-menu {
-            transition: transform 0.2s;
-            border: none;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        .card, .card-menu { 
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(10px); 
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05); 
+            border-radius: 12px; 
+            transition: all 0.3s ease;
         }
-        .card-menu:hover {
+        
+        .card-menu:hover, .card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08); 
         }
+
+        .btn { transition: all 0.3s ease; border-radius: 8px; }
+
+        .fc-event { cursor: pointer; border-radius: 4px; border: none; padding: 2px; }
+        .fc-day-today { background-color: rgba(13, 110, 253, 0.05) !important; }
     </style>
 </head>
 <body class="bg-light">
@@ -482,6 +495,70 @@
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
             <button type="submit" class="btn btn-success fw-bold">🚀 Enviar Reporte</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Aviso -->
+<div class="modal fade" id="modalAviso" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title">📢 Publicar Aviso General</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{% url 'crear_aviso' %}" method="post">
+          {% csrf_token %}
+          <div class="modal-body">
+            <div class="alert alert-light border small text-muted">
+                Este mensaje aparecerá en el inicio de todos los vecinos. Ideal para anunciar mantenimientos, cortes de agua o reglas.
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Título del Aviso</label>
+                <input type="text" name="titulo" class="form-control" placeholder="Ej: Fumigación este viernes" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Detalle del Mensaje</label>
+                <textarea name="mensaje" class="form-control" rows="4" placeholder="Escribe aquí los detalles del aviso..." required></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-dark fw-bold">📢 Publicar a Todos</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Bloqueo Fechas -->
+<div class="modal fade" id="modalBloqueo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">⛔ Bloquear Fecha (Áreas Sociales)</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{% url 'bloquear_fecha' %}" method="post">
+          {% csrf_token %}
+          <div class="modal-body">
+            <div class="alert alert-danger border small">
+                Al bloquear un día, <strong>nadie podrá realizar reservas</strong> de áreas sociales en esa fecha.
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Fecha a Bloquear</label>
+                <input type="date" name="fecha_bloqueo" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Motivo del Bloqueo</label>
+                <input type="text" name="motivo_bloqueo" class="form-control" placeholder="Ej: Mantenimiento de Piscina" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-danger fw-bold">⛔ Aplicar Bloqueo</button>
           </div>
       </form>
     </div>

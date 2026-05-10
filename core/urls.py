@@ -89,6 +89,7 @@ urlpatterns = [
 
     # --- MÓDULO SAAS (SUPERADMIN) ---
     path('saas/dashboard/', views_saas.superadmin_dashboard, name='superadmin_dashboard'),
+    path('saas/analitica/', views_saas.reporte_inteligencia, name='reporte_inteligencia'),
     path('saas/trial/<int:residencial_id>/', views_saas.iniciar_trial_saas, name='iniciar_trial_saas'),
     path('saas/planes/', views_saas.gestionar_planes, name='gestionar_planes'),
     path('saas/cliente/nuevo/', views_saas.crear_cliente_saas, name='crear_cliente_saas'),

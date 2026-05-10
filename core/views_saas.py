@@ -8,6 +8,7 @@ from django.db import transaction
 
 from .models import Residencial, SuscripcionResidencial, PlanSuscripcion, Usuario, FacturaSaaS
 from .forms import ResidencialOnboardingForm
+from .services import AnaliticaSaaSService
 
 def is_superadmin(user):
     return user.is_superuser
@@ -180,5 +181,21 @@ def crear_cliente_saas(request):
         form = ResidencialOnboardingForm()
         
     return render(request, 'core/saas/saas_crear_cliente.html', {'form': form})
+
+@user_passes_test(is_superadmin, login_url='/dashboard/')
+def reporte_inteligencia(request):
+    ingresos_residenciales = AnaliticaSaaSService.obtener_ingresos_globales_residenciales()
+    gastos_residenciales = AnaliticaSaaSService.obtener_gastos_globales()
+    rentabilidad_saas = AnaliticaSaaSService.obtener_rentabilidad_saas()
+    mrr_estimado = AnaliticaSaaSService.obtener_mr_estimado()
+
+    context = {
+        'ingresos_residenciales': ingresos_residenciales,
+        'gastos_residenciales': gastos_residenciales,
+        'rentabilidad_saas': rentabilidad_saas,
+        'mrr_estimado': mrr_estimado
+    }
+    return render(request, 'core/saas/reporte_inteligencia.html', context)
+
 
 

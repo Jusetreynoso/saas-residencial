@@ -1,7 +1,8 @@
 from decimal import Decimal
 from django.utils import timezone
 from django.db import transaction
-from .models import Factura, Usuario
+from .models import Factura, Usuario, FacturaSaaS, Gasto, Residencial
+from django.db.models import Sum
 
 def procesar_pago_fifo(usuario: Usuario, monto: Decimal, tipo_pago: str) -> dict:
     """
@@ -70,3 +71,31 @@ def procesar_pago_fifo(usuario: Usuario, monto: Decimal, tipo_pago: str) -> dict
             "sobrante": monto_disponible,
             "bolsillo_afectado": bolsillo_nombre
         }
+
+class AnaliticaSaaSService:
+    @staticmethod
+    def obtener_ingresos_globales_residenciales():
+        resultado = Factura.objects.filter(estado='PAGADO').aggregate(total=Sum('monto_pagado'))
+        return resultado['total'] or Decimal('0.00')
+
+    @staticmethod
+    def obtener_gastos_globales():
+        resultado = Gasto.objects.aggregate(total=Sum('monto'))
+        return resultado['total'] or Decimal('0.00')
+
+    @staticmethod
+    def obtener_rentabilidad_saas():
+        resultado = FacturaSaaS.objects.filter(estado='PAGADA').aggregate(total=Sum('monto'))
+        return resultado['total'] or Decimal('0.00')
+
+    @staticmethod
+    def obtener_mr_estimado():
+        # Sumamos la mensualidad de todas las suscripciones activas
+        from .models import SuscripcionResidencial
+        suscripciones = SuscripcionResidencial.objects.filter(estado='ACTIVA')
+        mrr_total = Decimal('0.00')
+        for s in suscripciones:
+            base = s.plan.precio_por_apartamento * s.residencial.apartamentos.count()
+            # Faltaría sumar administradores extra y servicios adicionales si aplica
+            mrr_total += base
+        return mrr_total
