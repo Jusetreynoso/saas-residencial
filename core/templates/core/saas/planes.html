@@ -1,0 +1,83 @@
+{% extends 'core/saas/superadmin_base.html' %}
+
+{% block title %}Planes y Precios - SaaS Master{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4 shadow-sm border-0">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-tags text-primary me-2"></i>Planes de Suscripción Creados</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-muted small text-uppercase">
+                            <tr>
+                                <th class="ps-4">Nombre del Plan</th>
+                                <th>Precio x Apto</th>
+                                <th>Precio Admin Extra</th>
+                                <th>Trial</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for plan in planes %}
+                            <tr>
+                                <td class="ps-4 fw-bold text-dark">{{ plan.nombre }}</td>
+                                <td><span class="badge bg-success">${{ plan.precio_por_apartamento }} / mes</span></td>
+                                <td><span class="badge bg-secondary">${{ plan.precio_usuario_extra }} / mes</span></td>
+                                <td>{{ plan.dias_prueba_default }} días</td>
+                                <td>
+                                    {% if plan.activo %}
+                                        <span class="text-success"><i class="bi bi-check-circle-fill"></i> Activo</span>
+                                    {% else %}
+                                        <span class="text-danger"><i class="bi bi-x-circle-fill"></i> Inactivo</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    No hay planes creados. Crea uno en el panel lateral.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 border-top border-primary border-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-plus-circle me-2"></i>Crear Nuevo Plan</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">NOMBRE DEL PLAN</label>
+                        <input type="text" name="nombre" class="form-control" placeholder="Ej: Plan Base" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">PRECIO POR APARTAMENTO ($)</label>
+                        <input type="number" step="0.01" name="precio_por_apartamento" class="form-control" placeholder="1.00" value="1.00" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">PRECIO USUARIO (ADMIN) EXTRA ($)</label>
+                        <input type="number" step="0.01" name="precio_usuario_extra" class="form-control" placeholder="5.00" value="5.00" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-muted small">DÍAS DE PRUEBA (TRIAL)</label>
+                        <input type="number" name="dias_prueba_default" class="form-control" value="30" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 fw-bold">Crear Plan</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

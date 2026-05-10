@@ -1,18 +1,17 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Sum, Count
 
-from .models import Residencial, SuscripcionResidencial, PlanSuscripcion, Usuario
+from .models import Residencial, SuscripcionResidencial, PlanSuscripcion, Usuario, FacturaSaaS
 
-@login_required
+def is_superadmin(user):
+    return user.is_superuser
+
+@user_passes_test(is_superadmin, login_url='/dashboard/')
 def superadmin_dashboard(request):
-    # Seguridad: Solo accesible por Super Administradores de la Plataforma
-    if request.user.rol != 'SUPERADMIN':
-        messages.error(request, "Acceso restringido al área SaaS.")
-        return redirect('dashboard')
 
     # 1. KPIs (Métricas principales)
     suscripciones = SuscripcionResidencial.objects.select_related('residencial', 'plan').prefetch_related('servicios_adicionales')
@@ -79,3 +78,69 @@ def iniciar_trial_saas(request, residencial_id):
         messages.warning(request, f"El residencial {residencial.nombre} ya tiene una suscripción.")
         
     return redirect('superadmin_dashboard')
+
+@user_passes_test(is_superadmin, login_url='/dashboard/')
+def gestionar_planes(request):
+    planes = PlanSuscripcion.objects.all()
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre')
+        precio_por_apartamento = request.POST.get('precio_por_apartamento')
+        precio_usuario_extra = request.POST.get('precio_usuario_extra')
+        dias_prueba = request.POST.get('dias_prueba_default')
+        
+        if nombre and precio_por_apartamento:
+            PlanSuscripcion.objects.create(
+                nombre=nombre,
+                precio_por_apartamento=precio_por_apartamento,
+                precio_usuario_extra=precio_usuario_extra,
+                dias_prueba_default=dias_prueba
+            )
+            messages.success(request, f"Plan {nombre} creado correctamente.")
+            return redirect('gestionar_planes')
+
+    return render(request, 'core/saas/planes.html', {'planes': planes})
+
+@user_passes_test(is_superadmin, login_url='/dashboard/')
+def detalle_cliente(request, residencial_id):
+    residencial = get_object_or_404(Residencial, id=residencial_id)
+    
+    if not hasattr(residencial, 'suscripcion'):
+        messages.warning(request, "Este residencial no tiene suscripción. Iníciale un Trial primero.")
+        return redirect('superadmin_dashboard')
+        
+    sub = residencial.suscripcion
+    mensualidad = sub.calcular_mensualidad()
+    facturas = residencial.facturas_saas.order_by('-fecha_emision')
+    
+    context = {
+        'residencial': residencial,
+        'suscripcion': sub,
+        'mensualidad_estimada': mensualidad,
+        'facturas': facturas
+    }
+    return render(request, 'core/saas/cliente_detalle.html', context)
+
+@user_passes_test(is_superadmin, login_url='/dashboard/')
+def cambiar_estado_suscripcion(request, residencial_id, nuevo_estado):
+    residencial = get_object_or_404(Residencial, id=residencial_id)
+    if hasattr(residencial, 'suscripcion'):
+        sub = residencial.suscripcion
+        if nuevo_estado in dict(SuscripcionResidencial.ESTADOS).keys():
+            sub.estado = nuevo_estado
+            sub.save()
+            messages.success(request, f"Estado de {residencial.nombre} cambiado a {nuevo_estado}")
+    return redirect('detalle_cliente', residencial_id=residencial.id)
+
+@user_passes_test(is_superadmin, login_url='/dashboard/')
+def facturacion_b2b(request):
+    facturas = FacturaSaaS.objects.select_related('residencial').order_by('-fecha_emision')
+    total_pendiente = facturas.filter(estado='PENDIENTE').aggregate(Sum('monto'))['monto__sum'] or 0
+    total_recaudado = facturas.filter(estado='PAGADA').aggregate(Sum('monto'))['monto__sum'] or 0
+    
+    context = {
+        'facturas': facturas,
+        'total_pendiente': total_pendiente,
+        'total_recaudado': total_recaudado
+    }
+    return render(request, 'core/saas/facturacion.html', context)
+

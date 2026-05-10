@@ -1,0 +1,118 @@
+{% extends 'core/saas/superadmin_base.html' %}
+
+{% block title %}{{ residencial.nombre }} - Cliente SaaS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{% url 'superadmin_dashboard' %}" class="text-decoration-none text-muted mb-2 d-block"><i class="bi bi-arrow-left"></i> Volver al Dashboard</a>
+        <h2 class="fw-bold mb-0 text-dark">{{ residencial.nombre }}</h2>
+        <p class="text-muted"><i class="bi bi-geo-alt"></i> ID Cliente: {{ residencial.id }} | 🏢 {{ residencial.apartamentos.count }} Apartamentos</p>
+    </div>
+    <div>
+        {% if suscripcion.estado == 'ACTIVA' %}
+            <span class="badge bg-success fs-5 px-4 py-2 rounded-pill">ACTIVA</span>
+        {% elif suscripcion.estado == 'PRUEBA' %}
+            <span class="badge bg-warning text-dark fs-5 px-4 py-2 rounded-pill">TRIAL</span>
+        {% else %}
+            <span class="badge bg-danger fs-5 px-4 py-2 rounded-pill">{{ suscripcion.estado }}</span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <!-- Panel Izquierdo: Info de Suscripción -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 mb-4 border-top border-primary border-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Detalles del Plan</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush mb-4">
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <span class="text-muted">Plan Base:</span>
+                        <span class="fw-bold">{{ suscripcion.plan.nombre }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <span class="text-muted">Licencia Expira:</span>
+                        <span class="fw-bold">{{ suscripcion.fecha_vencimiento_licencia|date:"d M Y" }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <span class="text-muted">MRR Estimado:</span>
+                        <span class="fw-bold text-success fs-5">${{ mensualidad_estimada|floatformat:2 }} / mes</span>
+                    </li>
+                </ul>
+
+                <h6 class="fw-bold text-muted text-uppercase mb-3">Acciones de Estado</h6>
+                <div class="d-grid gap-2">
+                    {% if suscripcion.estado == 'PRUEBA' or suscripcion.estado == 'SUSPENDIDA' %}
+                    <a href="{% url 'cambiar_estado_suscripcion' residencial.id 'ACTIVA' %}" class="btn btn-success fw-bold" onclick="return confirm('¿Pasar cliente a estado ACTIVO?')">
+                        <i class="bi bi-check-circle"></i> Marcar como ACTIVA
+                    </a>
+                    {% endif %}
+                    
+                    {% if suscripcion.estado == 'ACTIVA' or suscripcion.estado == 'PRUEBA' %}
+                    <a href="{% url 'cambiar_estado_suscripcion' residencial.id 'SUSPENDIDA' %}" class="btn btn-warning text-dark fw-bold" onclick="return confirm('¿Suspender el acceso al software para este condominio?')">
+                        <i class="bi bi-pause-circle"></i> Suspender Cliente
+                    </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'cambiar_estado_suscripcion' residencial.id 'CANCELADA' %}" class="btn btn-outline-danger fw-bold mt-2" onclick="return confirm('¿Cancelar suscripción definitivamente?')">
+                        <i class="bi bi-x-circle"></i> Cancelar Cuenta
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Derecho: Historial de Facturación B2B -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-receipt me-2 text-primary"></i>Historial de Facturación (SaaS)</h5>
+                <button class="btn btn-sm btn-outline-primary"><i class="bi bi-plus"></i> Generar Factura Manual</button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-muted small text-uppercase">
+                            <tr>
+                                <th class="ps-4">Fecha</th>
+                                <th>Concepto</th>
+                                <th>Monto</th>
+                                <th>Vence</th>
+                                <th class="text-end pe-4">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fac in facturas %}
+                            <tr>
+                                <td class="ps-4 fw-bold">{{ fac.fecha_emision|date:"d M y" }}</td>
+                                <td>{{ fac.concepto }}</td>
+                                <td class="fw-bold">${{ fac.monto }}</td>
+                                <td>{{ fac.fecha_vencimiento|date:"d M y" }}</td>
+                                <td class="text-end pe-4">
+                                    {% if fac.estado == 'PAGADA' %}
+                                        <span class="badge bg-success">PAGADA</span>
+                                    {% elif fac.estado == 'PENDIENTE' %}
+                                        <span class="badge bg-warning text-dark">PENDIENTE</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">{{ fac.estado }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    Este cliente aún no tiene facturas de suscripción emitidas.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
