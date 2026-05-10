@@ -1,0 +1,88 @@
+{% extends 'core/saas/superadmin_base.html' %}
+
+{% block title %}Registrar Nuevo Cliente - SaaS Master{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <a href="{% url 'superadmin_dashboard' %}" class="text-decoration-none text-muted mb-2 d-block"><i class="bi bi-arrow-left"></i> Volver al Dashboard</a>
+                <h2 class="fw-bold mb-0 text-dark">Registrar Nuevo Residencial</h2>
+                <p class="text-muted">Onboarding de nuevos clientes a la plataforma</p>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 border-top border-primary border-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-building-add me-2 text-primary"></i>Datos del Condominio y Suscripción</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <h6 class="fw-bold text-muted text-uppercase mb-3"><i class="bi bi-1-circle"></i> Información Básica</h6>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">Nombre del Residencial / Condominio</label>
+                        {{ form.nombre }}
+                        {% if form.nombre.errors %}<div class="text-danger small">{{ form.nombre.errors }}</div>{% endif %}
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-dark">Dirección Completa</label>
+                        {{ form.direccion }}
+                        {% if form.direccion.errors %}<div class="text-danger small">{{ form.direccion.errors }}</div>{% endif %}
+                    </div>
+
+                    <hr class="text-muted my-4">
+
+                    <h6 class="fw-bold text-muted text-uppercase mb-3"><i class="bi bi-2-circle"></i> Configuración Financiera (Para el Cliente)</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold text-dark">Día de Corte</label>
+                            <div class="input-group">
+                                {{ form.dia_corte }}
+                                <span class="input-group-text">de cada mes</span>
+                            </div>
+                            <small class="text-muted">Día de facturación</small>
+                            {% if form.dia_corte.errors %}<div class="text-danger small">{{ form.dia_corte.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold text-dark">Días de Gracia</label>
+                            {{ form.dias_gracia }}
+                            <small class="text-muted">Sin recargos</small>
+                            {% if form.dias_gracia.errors %}<div class="text-danger small">{{ form.dias_gracia.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold text-dark">% de Mora</label>
+                            <div class="input-group">
+                                {{ form.porcentaje_mora }}
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <small class="text-muted">Penalidad mensual</small>
+                            {% if form.porcentaje_mora.errors %}<div class="text-danger small">{{ form.porcentaje_mora.errors }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <hr class="text-muted my-4">
+
+                    <h6 class="fw-bold text-primary text-uppercase mb-3"><i class="bi bi-3-circle"></i> Asignación de Plan SaaS (B2B)</h6>
+                    <div class="mb-4 p-3 bg-light rounded border">
+                        <label class="form-label fw-bold text-dark">Selecciona el Plan de Suscripción</label>
+                        {{ form.plan_suscripcion }}
+                        <div class="form-text text-muted mt-2">
+                            <i class="bi bi-info-circle"></i> Al crear el residencial, el sistema iniciará automáticamente un período de <strong>Prueba (Trial)</strong> basado en los días configurados en este plan.
+                        </div>
+                        {% if form.plan_suscripcion.errors %}<div class="text-danger small">{{ form.plan_suscripcion.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg fw-bold">
+                            <i class="bi bi-check-circle me-2"></i> Crear Cliente e Iniciar Trial
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

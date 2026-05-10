@@ -4,8 +4,10 @@ from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Sum, Count
+from django.db import transaction
 
 from .models import Residencial, SuscripcionResidencial, PlanSuscripcion, Usuario, FacturaSaaS
+from .forms import ResidencialOnboardingForm
 
 def is_superadmin(user):
     return user.is_superuser
@@ -143,4 +145,40 @@ def facturacion_b2b(request):
         'total_recaudado': total_recaudado
     }
     return render(request, 'core/saas/facturacion.html', context)
+
+@user_passes_test(is_superadmin, login_url='/dashboard/')
+def crear_cliente_saas(request):
+    if request.method == 'POST':
+        form = ResidencialOnboardingForm(request.POST)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    # 1. Crear el Residencial
+                    residencial = form.save()
+                    
+                    # 2. Obtener el plan seleccionado
+                    plan = form.cleaned_data['plan_suscripcion']
+                    
+                    # 3. Crear la suscripción automáticamente en Trial
+                    fecha_inicio = timezone.now().date()
+                    fecha_venc = fecha_inicio + timedelta(days=plan.dias_prueba_default)
+                    
+                    SuscripcionResidencial.objects.create(
+                        residencial=residencial,
+                        plan=plan,
+                        estado='PRUEBA',
+                        fecha_vencimiento_licencia=fecha_venc
+                    )
+                    
+                    messages.success(request, f"¡Residencial {residencial.nombre} creado y activado en Trial por {plan.dias_prueba_default} días!")
+                    return redirect('detalle_cliente', residencial_id=residencial.id)
+            except Exception as e:
+                messages.error(request, f"Error al crear el cliente: {str(e)}")
+        else:
+            messages.error(request, "Por favor corrige los errores del formulario.")
+    else:
+        form = ResidencialOnboardingForm()
+        
+    return render(request, 'core/saas/saas_crear_cliente.html', {'form': form})
+
 

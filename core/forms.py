@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta, datetime
 # IMPORTANTE: Agregamos Usuario a esta lista y quitamos la importación de 'auth.User'
-from .models import Reserva, AreaSocial, BloqueoFecha, LecturaGas, Apartamento, Gasto, Aviso, Usuario, Incidencia, ReportePago, IngresoExtraordinario
+from .models import Reserva, AreaSocial, BloqueoFecha, LecturaGas, Apartamento, Gasto, Aviso, Usuario, Incidencia, ReportePago, IngresoExtraordinario, Residencial, PlanSuscripcion
 
 # ==========================================
 # 1. FORMULARIO DE RESERVAS
@@ -294,3 +294,25 @@ class IngresoExtraForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if admin_user and admin_user.residencial:
             self.fields['Apartamento'].queryset = Apartamento.objects.filter(residencial=admin_user.residencial)
+
+# ==========================================
+# 6. SAAS ONBOARDING (SUPERADMIN)
+# ==========================================
+class ResidencialOnboardingForm(forms.ModelForm):
+    plan_suscripcion = forms.ModelChoiceField(
+        queryset=PlanSuscripcion.objects.filter(activo=True),
+        required=True,
+        label="Plan de Suscripción Inicial",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    class Meta:
+        model = Residencial
+        fields = ['nombre', 'direccion', 'dia_corte', 'dias_gracia', 'porcentaje_mora']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Torre Libertad'}),
+            'direccion': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Dirección completa'}),
+            'dia_corte': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 1'}),
+            'dias_gracia': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 5'}),
+            'porcentaje_mora': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 10'}),
+        }
