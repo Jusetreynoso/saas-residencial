@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from . import views
+from . import views_saas
 
 
 urlpatterns = [
@@ -85,4 +86,8 @@ urlpatterns = [
 
     # RUTA DE LA BITÁCORA DE AUDITORÍA
     path('auditoria/', views.ver_bitacora, name='ver_bitacora'),
+
+    # --- MÓDULO SAAS (SUPERADMIN) ---
+    path('saas/dashboard/', views_saas.superadmin_dashboard, name='superadmin_dashboard'),
+    path('saas/trial/<int:residencial_id>/', views_saas.iniciar_trial_saas, name='iniciar_trial_saas'),
 ]

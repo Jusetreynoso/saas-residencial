@@ -62,6 +62,7 @@ class Usuario(AbstractUser):
     ROLES = (
         ('SUPERADMIN', 'Super Administrador (Todo el sistema)'),
         ('ADMIN_RESIDENCIAL', 'Administrador de Residencial'),
+        ('ASISTENTE', 'Asistente Administrativo'),
         ('RESIDENTE', 'Residente'),
     )
     
@@ -356,5 +357,71 @@ class Bitacora(models.Model):
 
     def __str__(self):
         return f"{self.fecha.strftime('%d/%m/%Y %H:%M')} - {self.usuario} - {self.accion}"
-    
 
+# ---------------------------------------------------------
+# MÓDULO SAAS (Facturación Interna de la Plataforma)
+# ---------------------------------------------------------
+
+class PlanSuscripcion(models.Model):
+    nombre = models.CharField(max_length=50, help_text="Ej: Plan Básico, Plan Premium")
+    precio_por_apartamento = models.DecimalField(max_digits=8, decimal_places=2, default=1.00)
+    precio_usuario_extra = models.DecimalField(max_digits=8, decimal_places=2, default=5.00)
+    dias_prueba_default = models.IntegerField(default=30)
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.nombre} (${self.precio_por_apartamento}/apto)"
+
+class ServicioAdicional(models.Model):
+    nombre = models.CharField(max_length=100, help_text="Ej: Soporte Premium 24/7, Módulo Contable Avanzado")
+    precio_mensual = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.nombre} (${self.precio_mensual}/mes)"
+
+class SuscripcionResidencial(models.Model):
+    ESTADOS = (
+        ('PRUEBA', 'Período de Prueba (Trial)'),
+        ('ACTIVA', 'Suscripción Activa'),
+        ('SUSPENDIDA', 'Cuenta Suspendida (Morosidad)'),
+        ('CANCELADA', 'Cuenta Cancelada'),
+    )
+
+    residencial = models.OneToOneField('Residencial', on_delete=models.CASCADE, related_name='suscripcion')
+    plan = models.ForeignKey(PlanSuscripcion, on_delete=models.RESTRICT)
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='PRUEBA')
+    
+    fecha_inicio = models.DateField(auto_now_add=True)
+    fecha_vencimiento_licencia = models.DateField()
+    
+    servicios_adicionales = models.ManyToManyField(ServicioAdicional, blank=True)
+
+    def calcular_mensualidad(self):
+        from django.db.models import Sum
+        from django.db.models.functions import Coalesce
+        from decimal import Decimal
+
+        # 1. Cobro Base por Apartamentos
+        total_apartamentos = self.residencial.apartamentos.count()
+        cobro_base = Decimal(total_apartamentos) * self.plan.precio_por_apartamento
+
+        # 2. Cobro por Usuarios Extras (Admin y Asistentes)
+        usuarios_admin = self.residencial.usuario_set.filter(
+            rol__in=['ADMIN_RESIDENCIAL', 'ASISTENTE'] 
+        ).count()
+        
+        # 1 Admin principal + 1 Asistente son GRATIS = 2 usuarios libres
+        usuarios_facturables = max(0, usuarios_admin - 2)
+        cobro_usuarios = Decimal(usuarios_facturables) * self.plan.precio_usuario_extra
+
+        # 3. Servicios Adicionales (Add-ons)
+        cobro_servicios = self.servicios_adicionales.aggregate(
+            total=Coalesce(Sum('precio_mensual'), Decimal('0.00'))
+        )['total']
+
+        # Total a facturar este mes
+        return cobro_base + cobro_usuarios + cobro_servicios
+
+    def __str__(self):
+        return f"Suscripción de {self.residencial.nombre} - {self.get_estado_display()}"
