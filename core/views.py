@@ -45,11 +45,8 @@ def dashboard(request):
     context = {}
 
     # 1. LÓGICA PARA SUPER ADMIN
-    if user.is_superuser:
-        context['rol'] = 'Super Administrador'
-        context['total_residenciales'] = Residencial.objects.count()
-        context['residenciales'] = Residencial.objects.all()
-        context['total_usuarios'] = Usuario.objects.count()
+    if user.is_superuser or user.rol == 'SUPERADMIN':
+        return redirect('superadmin_dashboard')
     
     # 2. LÓGICA PARA USUARIOS DEL RESIDENCIAL
     elif user.residencial:
