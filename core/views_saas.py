@@ -37,12 +37,20 @@ def superadmin_dashboard(request):
             'dias_restantes': (sub.fecha_vencimiento_licencia - timezone.now().date()).days
         })
 
+    # 3. Residenciales huérfanos (Aún sin suscripción)
+    residenciales_sin_suscripcion = Residencial.objects.filter(suscripcion__isnull=True)
+    
+    # 4. Planes disponibles
+    planes = PlanSuscripcion.objects.all()
+
     context = {
         'clientes_activos': clientes_activos,
         'clientes_prueba': clientes_prueba,
         'clientes_suspendidos': clientes_suspendidos,
         'mrr_estimado': mrr_estimado,
-        'datos_clientes': datos_clientes
+        'datos_clientes': datos_clientes,
+        'residenciales_sin_suscripcion': residenciales_sin_suscripcion,
+        'planes': planes
     }
     return render(request, 'core/saas/superadmin_dashboard.html', context)
 

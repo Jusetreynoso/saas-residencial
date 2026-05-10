@@ -120,76 +120,131 @@
         </div>
     </div>
 
-    <!-- Tabla Principal de Residenciales -->
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fw-bold"><i class="bi bi-list-columns-reverse me-2"></i>Gestión de Clientes (Residenciales)</h5>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-4">Residencial</th>
-                            <th>Volumen</th>
-                            <th>Plan SaaS</th>
-                            <th>Renovación / Licencia</th>
-                            <th>Estado</th>
-                            <th class="text-end pe-4">Facturación Mes</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in datos_clientes %}
-                        <tr>
-                            <td class="ps-4">
-                                <div class="fw-bold text-dark">{{ item.residencial.nombre }}</div>
-                                <small class="text-muted"><i class="bi bi-geo-alt"></i> ID: {{ item.residencial.id }}</small>
-                            </td>
-                            <td>
-                                <div><span class="badge bg-secondary">{{ item.apartamentos }}</span> Aptos</div>
-                                {% if item.usuarios_extra > 0 %}
-                                    <div class="mt-1"><small class="text-danger fw-bold">+{{ item.usuarios_extra }} Admins Extra</small></div>
-                                {% else %}
-                                    <div class="mt-1"><small class="text-success">0 Admins Extra</small></div>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <span class="badge bg-primary">{{ item.plan.nombre }}</span>
-                            </td>
-                            <td>
-                                {% if item.dias_restantes > 10 %}
-                                    <div class="fw-bold text-success">{{ item.dias_restantes }} días restantes</div>
-                                {% elif item.dias_restantes > 0 %}
-                                    <div class="fw-bold text-warning">{{ item.dias_restantes }} días restantes</div>
-                                {% else %}
-                                    <div class="fw-bold text-danger">Vencido hace {{ item.dias_restantes|stringformat:"d"|slice:"1:" }} días</div>
-                                {% endif %}
-                                <small class="text-muted">Exp: {{ item.suscripcion.fecha_vencimiento_licencia|date:"d M Y" }}</small>
-                            </td>
-                            <td>
-                                {% if item.suscripcion.estado == 'ACTIVA' %}
-                                    <span class="badge bg-success rounded-pill px-3 py-2">ACTIVA</span>
-                                {% elif item.suscripcion.estado == 'PRUEBA' %}
-                                    <span class="badge bg-warning text-dark rounded-pill px-3 py-2">TRIAL</span>
-                                {% else %}
-                                    <span class="badge bg-danger rounded-pill px-3 py-2">{{ item.suscripcion.estado }}</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end pe-4">
-                                <div class="fw-bold fs-5">${{ item.mensualidad|floatformat:2 }}</div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">
-                                <h5>No hay suscripciones SaaS registradas</h5>
-                                <p>Crea un Plan de Suscripción en el panel de Admin y activa un Trial.</p>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <div class="row">
+        <!-- Columna Izquierda: Suscripciones Activas -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-list-columns-reverse me-2 text-primary"></i>Suscripciones Activas / Trials</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Residencial</th>
+                                    <th>Volumen</th>
+                                    <th>SaaS</th>
+                                    <th>Renovación</th>
+                                    <th>Estado</th>
+                                    <th class="text-end pe-4">MRR</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in datos_clientes %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="fw-bold text-dark">{{ item.residencial.nombre }}</div>
+                                        <small class="text-muted"><i class="bi bi-geo-alt"></i> ID: {{ item.residencial.id }}</small>
+                                    </td>
+                                    <td>
+                                        <div><span class="badge bg-secondary">{{ item.apartamentos }}</span> Aptos</div>
+                                        {% if item.usuarios_extra > 0 %}
+                                            <div class="mt-1"><small class="text-danger fw-bold">+{{ item.usuarios_extra }} Admins Extra</small></div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ item.plan.nombre }}</span>
+                                    </td>
+                                    <td>
+                                        {% if item.dias_restantes > 10 %}
+                                            <div class="fw-bold text-success">{{ item.dias_restantes }} días</div>
+                                        {% elif item.dias_restantes > 0 %}
+                                            <div class="fw-bold text-warning">{{ item.dias_restantes }} días</div>
+                                        {% else %}
+                                            <div class="fw-bold text-danger">Vencido ({{ item.dias_restantes|stringformat:"d"|slice:"1:" }})</div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.suscripcion.estado == 'ACTIVA' %}
+                                            <span class="badge bg-success rounded-pill">ACTIVA</span>
+                                        {% elif item.suscripcion.estado == 'PRUEBA' %}
+                                            <span class="badge bg-warning text-dark rounded-pill">TRIAL</span>
+                                        {% else %}
+                                            <span class="badge bg-danger rounded-pill">{{ item.suscripcion.estado }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end pe-4 fw-bold text-dark">
+                                        ${{ item.mensualidad|floatformat:2 }}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <h5>No hay suscripciones SaaS registradas</h5>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
+        </div>
+
+        <!-- Columna Derecha: Acciones y Clientes Nuevos -->
+        <div class="col-lg-4">
+            
+            <!-- Acciones Rápidas del Sistema -->
+            <div class="card shadow-sm border-0 mb-4 border-top border-primary border-4">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-gear-fill me-2"></i>Ajustes del Sistema</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="/admin/" class="btn btn-dark text-start fw-bold" target="_blank">
+                            <i class="bi bi-terminal me-2"></i> Ir al Panel Django Admin
+                        </a>
+                        <a href="/admin/core/residencial/add/" class="btn btn-outline-primary text-start fw-bold" target="_blank">
+                            <i class="bi bi-building-add me-2"></i> Crear Nuevo Residencial
+                        </a>
+                        <a href="/admin/core/plansuscripcion/" class="btn btn-outline-success text-start fw-bold" target="_blank">
+                            <i class="bi bi-tags me-2"></i> Gestionar Planes SaaS
+                        </a>
+                        <a href="{% url 'ver_bitacora' %}" class="btn btn-outline-danger text-start fw-bold">
+                            <i class="bi bi-journal-code me-2"></i> Ver Auditoría Global
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Residenciales Huérfanos -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-warning bg-opacity-25 border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-exclamation-triangle me-2 text-warning"></i>Sin Suscripción</h5>
+                    <span class="badge bg-warning text-dark">{{ residenciales_sin_suscripcion.count }}</span>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for res in residenciales_sin_suscripcion %}
+                            <li class="list-group-item py-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-bold text-dark">{{ res.nombre }}</div>
+                                    <small class="text-muted">{{ res.apartamentos.count }} Aptos</small>
+                                </div>
+                                <a href="{% url 'iniciar_trial_saas' res.id %}" class="btn btn-sm btn-warning fw-bold text-dark" onclick="return confirm('¿Iniciar 30 días de prueba para este residencial? Asegúrate de tener al menos 1 Plan creado.')">
+                                    <i class="bi bi-rocket-takeoff"></i> Activar Trial
+                                </a>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item py-4 text-center text-muted">
+                                Todos los residenciales tienen un plan asignado.
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
         </div>
     </div>
 
