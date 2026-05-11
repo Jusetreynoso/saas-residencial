@@ -172,18 +172,30 @@ class BloqueoFecha(models.Model):
 
 class Gasto(models.Model):
     CATEGORIAS = (
-        ('GAS', 'Compra de Gas (Camión)'),
-        ('SERVICIOS', 'Servicios Básicos (Luz, Agua)'),
-        ('MANTENIMIENTO', 'Mantenimiento y Reparaciones'),
-        ('NOMINA', 'Nómina y Personal'),
-        ('OTRO', 'Otros'),
+        ('COMPRAS_GAS', 'Compras Gas (Camión)'),
+        ('COMPRAS_GENERALES', 'Compras Generales (Insumos, limpieza, etc.)'),
+        ('SERV_ELECTRICIDAD', 'Servicios: Electricidad'),
+        ('SERV_AGUA', 'Servicios: Agua'),
+        ('SERV_INTERNET', 'Servicios: Teléfono e Internet'),
+        ('SERV_AYUNTAMIENTO', 'Servicios: Ayuntamiento (Recogida de basura/tasas)'),
+        ('MANT_GENERAL', 'Mantenimiento y Reparaciones Generales'),
+        ('MANT_PISCINA', 'Mantenimiento de Piscina'),
+        ('MANT_ASCENSORES', 'Mantenimiento de Ascensores'),
+        ('JARDINERIA', 'Jardinería y Áreas Verdes'),
+        ('FUMIGACION', 'Fumigación y Control de Plagas'),
+        ('NOMINA', 'Nómina y Personal (Conserjes, seguridad, etc.)'),
+        ('HONORARIOS_PROF', 'Honorarios Profesionales (Contables, legales)'),
+        ('SEGUROS', 'Seguros (Pólizas del edificio)'),
+        ('IMPUESTOS', 'Impuestos'),
+        ('DONACIONES', 'Donaciones'),
+        ('IMPREVISTOS', 'Imprevistos y Caja Chica'),
     )
 
     residencial = models.ForeignKey(Residencial, on_delete=models.CASCADE)
     descripcion = models.CharField(max_length=200, help_text="Ej: Carga de Gas Enero")
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     fecha_gasto = models.DateField()
-    categoria = models.CharField(max_length=20, choices=CATEGORIAS, default='OTRO')
+    categoria = models.CharField(max_length=50, choices=CATEGORIAS, default='IMPREVISTOS')
 
     def __str__(self):
         return f"{self.descripcion} - ${self.monto}"
