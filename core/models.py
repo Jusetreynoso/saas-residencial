@@ -371,6 +371,40 @@ class Bitacora(models.Model):
         return f"{self.fecha.strftime('%d/%m/%Y %H:%M')} - {self.usuario} - {self.accion}"
 
 # ---------------------------------------------------------
+# 6. Módulo de Marketplace (Clasificados Globales)
+# ---------------------------------------------------------
+
+class CategoriaMarketplace(models.Model):
+    nombre = models.CharField(max_length=50, unique=True, help_text="Ej: Muebles, Vehículos, Servicios")
+    icono = models.CharField(max_length=50, blank=True, null=True, help_text="Clase de FontAwesome (ej: fas fa-couch)")
+
+    def __str__(self):
+        return self.nombre
+
+class ProductoMarketplace(models.Model):
+    ESTADOS = [
+        ('ACTIVO', 'Activo'),
+        ('VENDIDO', 'Vendido'),
+        ('INACTIVO', 'Inactivo (Pausado)')
+    ]
+    
+    # Aunque es global, guardamos el residencial del vendedor para mostrar "Ubicación"
+    residencial = models.ForeignKey(Residencial, on_delete=models.CASCADE)
+    vendedor = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='productos_marketplace')
+    categoria = models.ForeignKey(CategoriaMarketplace, on_delete=models.SET_NULL, null=True)
+    
+    titulo = models.CharField(max_length=150)
+    descripcion = models.TextField()
+    precio = models.DecimalField(max_digits=12, decimal_places=2)
+    imagen = models.ImageField(upload_to='marketplace/', blank=True, null=True)
+    
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='ACTIVO')
+    fecha_publicacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.titulo} - {self.vendedor.username}"
+
+# ---------------------------------------------------------
 # MÓDULO SAAS (Facturación Interna de la Plataforma)
 # ---------------------------------------------------------
 

@@ -87,6 +87,12 @@ urlpatterns = [
     # RUTA DE LA BITÁCORA DE AUDITORÍA
     path('auditoria/', views.ver_bitacora, name='ver_bitacora'),
 
+    # --- MARKETPLACE (GLOBAL) ---
+    path('marketplace/', views.marketplace_list, name='marketplace_list'),
+    path('marketplace/nuevo/', views.producto_crear, name='producto_crear'),
+    path('marketplace/editar/<int:producto_id>/', views.producto_editar, name='producto_editar'),
+    path('marketplace/borrar/<int:producto_id>/', views.producto_borrar, name='producto_borrar'),
+
     # --- MÓDULO SAAS (SUPERADMIN) ---
     path('saas/dashboard/', views_saas.superadmin_dashboard, name='superadmin_dashboard'),
     path('saas/analitica/', views_saas.reporte_inteligencia, name='reporte_inteligencia'),

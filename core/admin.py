@@ -3,7 +3,8 @@ from django.contrib.auth.admin import UserAdmin
 # 1. ACTUALIZAMOS IMPORTS: Agregamos Incidencia
 from .models import (
     Usuario, Residencial, Apartamento, AreaSocial, 
-    Reserva, BloqueoFecha, Gasto, Factura, LecturaGas, Aviso, Incidencia, ReportePago, Aviso, IngresoExtraordinario
+    Reserva, BloqueoFecha, Gasto, Factura, LecturaGas, Aviso, Incidencia, ReportePago, IngresoExtraordinario,
+    CategoriaMarketplace, ProductoMarketplace
 )
 
 # --- CONFIGURACIÓN DE USUARIO ---
@@ -98,3 +99,19 @@ class IngresoExtraordinarioAdmin(admin.ModelAdmin):
     search_fields = ('concepto_detalle',)
 
 # Forzando actualizacion del admin panel - Intento 1
+
+# =========================================================
+# MARKETPLACE (Clasificados)
+# =========================================================
+
+@admin.register(CategoriaMarketplace)
+class CategoriaMarketplaceAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'icono')
+    search_fields = ('nombre',)
+
+@admin.register(ProductoMarketplace)
+class ProductoMarketplaceAdmin(admin.ModelAdmin):
+    list_display = ('titulo', 'vendedor', 'residencial', 'precio', 'estado', 'fecha_publicacion')
+    list_filter = ('estado', 'categoria', 'residencial')
+    search_fields = ('titulo', 'descripcion', 'vendedor__username', 'residencial__nombre')
+    readonly_fields = ('fecha_publicacion',)

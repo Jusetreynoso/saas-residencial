@@ -24,10 +24,11 @@ from .forms import (
     EditarVecinoForm,
     AbonoForm,
     ReportePagoForm,
-    IngresoExtraForm
+    IngresoExtraForm,
+    ProductoMarketplaceForm
 )
 
-from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia, ReportePago, IngresoExtraordinario, Bitacora
+from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia, ReportePago, IngresoExtraordinario, Bitacora, ProductoMarketplace, CategoriaMarketplace
 from django.db.models import Sum, Max, Count, Q, F, Case, When, Value
 from django.db.models.functions import TruncMonth, Coalesce
 from itertools import chain
@@ -1702,3 +1703,66 @@ def ver_bitacora(request):
     logs = Bitacora.objects.filter(residencial=request.user.residencial).order_by('-fecha')[:200]
     
     return render(request, 'core/bitacora.html', {'logs': logs})
+
+# =========================================================
+# MÓDULO MARKETPLACE (GLOBAL)
+# =========================================================
+
+@login_required
+def marketplace_list(request):
+    # Marketplace global: muestra todos los productos ACTIVOS de todos los residenciales
+    productos = ProductoMarketplace.objects.filter(estado='ACTIVO').order_by('-fecha_publicacion')
+    categorias = CategoriaMarketplace.objects.all()
+
+    # Filtro por categoría opcional
+    cat_id = request.GET.get('categoria')
+    if cat_id:
+        productos = productos.filter(categoria_id=cat_id)
+
+    return render(request, 'core/marketplace/marketplace_list.html', {
+        'productos': productos,
+        'categorias': categorias,
+        'cat_id': cat_id,
+    })
+
+@login_required
+def producto_crear(request):
+    if request.method == 'POST':
+        form = ProductoMarketplaceForm(request.POST, request.FILES)
+        if form.is_valid():
+            producto = form.save(commit=False)
+            producto.vendedor = request.user
+            producto.residencial = request.user.residencial
+            producto.save()
+            messages.success(request, '🎉 Producto publicado exitosamente en el Marketplace.')
+            return redirect('marketplace_list')
+    else:
+        form = ProductoMarketplaceForm()
+
+    return render(request, 'core/marketplace/producto_form.html', {'form': form, 'accion': 'Publicar'})
+
+@login_required
+def producto_editar(request, producto_id):
+    producto = get_object_or_404(ProductoMarketplace, pk=producto_id, vendedor=request.user)
+    
+    if request.method == 'POST':
+        form = ProductoMarketplaceForm(request.POST, request.FILES, instance=producto)
+        if form.is_valid():
+            form.save()
+            messages.success(request, '✅ Producto actualizado.')
+            return redirect('marketplace_list')
+    else:
+        form = ProductoMarketplaceForm(instance=producto)
+
+    return render(request, 'core/marketplace/producto_form.html', {'form': form, 'accion': 'Editar'})
+
+@login_required
+def producto_borrar(request, producto_id):
+    # Se puede eliminar si es el vendedor o un superadmin (o admin del residencial)
+    producto = get_object_or_404(ProductoMarketplace, pk=producto_id)
+    if producto.vendedor == request.user or request.user.rol in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        producto.delete()
+        messages.success(request, '🗑️ Producto eliminado del Marketplace.')
+    else:
+        messages.error(request, 'No tienes permiso para borrar esto.')
+    return redirect('marketplace_list')

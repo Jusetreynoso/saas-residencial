@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ accion }} Producto</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { 
+            background-color: #f8f9fa; 
+            font-family: 'Inter', sans-serif;
+        }
+        .navbar {
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .glass-container {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="{% url 'marketplace_list' %}">⬅️ Volver al Marketplace</a>
+    </div>
+</nav>
+
+<div class="container pb-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="glass-container p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <h3 class="fw-bold mb-0">
+                        <i class="fas fa-tags text-primary me-2"></i> {{ accion }} Producto
+                    </h3>
+                    <p class="text-muted">Completa los datos para publicar tu anuncio en el Marketplace.</p>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    {% if form.errors %}
+                    <div class="alert alert-danger rounded-3 border-0 shadow-sm">
+                        <strong>Por favor corrige los siguientes errores:</strong>
+                        {{ form.errors }}
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ form.categoria.label }}</label>
+                        {{ form.categoria }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ form.titulo.label }}</label>
+                        {{ form.titulo }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ form.descripcion.label }}</label>
+                        {{ form.descripcion }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ form.precio.label }}</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-dollar-sign text-success"></i></span>
+                            {{ form.precio }}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">{{ form.imagen.label }}</label>
+                        {{ form.imagen }}
+                        <small class="text-muted d-block mt-1">Sube una foto clara del producto (Opcional pero recomendado).</small>
+                    </div>
+
+                    {% if accion == 'Editar' %}
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Estado del Producto</label>
+                        <select name="estado" class="form-select">
+                            <option value="ACTIVO" {% if form.instance.estado == 'ACTIVO' %}selected{% endif %}>Activo (Visible)</option>
+                            <option value="VENDIDO" {% if form.instance.estado == 'VENDIDO' %}selected{% endif %}>Vendido</option>
+                            <option value="INACTIVO" {% if form.instance.estado == 'INACTIVO' %}selected{% endif %}>Inactivo (Oculto)</option>
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm" style="font-size: 1.1rem;">
+                        <i class="fas fa-paper-plane me-2"></i> {{ accion }} Anuncio
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

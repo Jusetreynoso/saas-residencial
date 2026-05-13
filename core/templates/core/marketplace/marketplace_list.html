@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Marketplace Residencial</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { 
+            background-color: #f8f9fa; 
+            font-family: 'Inter', sans-serif;
+        }
+        .navbar {
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .glass-container {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+        }
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+        }
+        .text-truncate-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">⬅️ Volver al Dashboard</a>
+        <div class="d-flex align-items-center text-white">
+            <span class="me-3">Marketplace Global</span>
+        </div>
+    </div>
+</nav>
+
+<div class="container pb-5">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="glass-container p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+            <div>
+                <h2 class="fw-bold mb-1"><i class="fas fa-store text-primary me-2"></i> Marketplace Global</h2>
+                <p class="text-muted mb-0">Encuentra o publica productos y servicios de toda nuestra red de residenciales.</p>
+            </div>
+            <a href="{% url 'producto_crear' %}" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold">
+                <i class="fas fa-plus me-2"></i> Publicar Artículo
+            </a>
+        </div>
+
+        <!-- Filtros de Categoría -->
+        <div class="mb-4 d-flex gap-2 flex-wrap">
+            <a href="{% url 'marketplace_list' %}" class="btn btn-sm {% if not cat_id %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+                Todas
+            </a>
+            {% for cat in categorias %}
+            <a href="?categoria={{ cat.id }}" class="btn btn-sm {% if cat_id == cat.id|stringformat:'s' %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+                {% if cat.icono %}<i class="{{ cat.icono }} me-1"></i>{% endif %} {{ cat.nombre }}
+            </a>
+            {% endfor %}
+        </div>
+
+        <!-- Grid de Productos -->
+        <div class="row g-4">
+            {% for producto in productos %}
+            <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+                <div class="card h-100 border-0 shadow-sm glass-card overflow-hidden" style="border-radius: 15px; transition: transform 0.3s ease;">
+                    <!-- Imagen -->
+                    <div style="height: 200px; background-color: #f8f9fa; position: relative;">
+                        {% if producto.imagen %}
+                        <img src="{{ producto.imagen.url }}" alt="{{ producto.titulo }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                        <div class="d-flex justify-content-center align-items-center h-100 text-muted">
+                            <i class="fas fa-image fa-3x"></i>
+                        </div>
+                        {% endif %}
+                        
+                        <span class="badge bg-primary position-absolute top-0 end-0 m-2 rounded-pill px-3 py-2 fs-6">
+                            ${{ producto.precio|floatformat:2 }}
+                        </span>
+                    </div>
+
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title fw-bold text-truncate mb-0" title="{{ producto.titulo }}">{{ producto.titulo }}</h5>
+                        </div>
+                        
+                        <p class="text-muted small mb-3">
+                            <i class="fas fa-map-marker-alt text-danger me-1"></i> {{ producto.residencial.nombre }} <br>
+                            <i class="fas fa-user text-secondary me-1"></i> {{ producto.vendedor.first_name|default:producto.vendedor.username }}
+                        </p>
+
+                        <p class="card-text text-truncate-2 flex-grow-1" style="font-size: 0.9rem;">
+                            {{ producto.descripcion }}
+                        </p>
+
+                        <div class="mt-auto pt-3 border-top">
+                            {% if producto.vendedor == request.user or request.user.rol == 'SUPERADMIN' %}
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'producto_editar' producto.id %}" class="btn btn-outline-primary btn-sm w-100 me-2 rounded-pill">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </a>
+                                    <a href="{% url 'producto_borrar' producto.id %}" class="btn btn-outline-danger btn-sm w-100 rounded-pill" onclick="return confirm('¿Seguro que deseas eliminar este producto?');">
+                                        <i class="fas fa-trash"></i> Borrar
+                                    </a>
+                                </div>
+                            {% else %}
+                                {% if producto.vendedor.telefono %}
+                                    <a href="https://wa.me/1{{ producto.vendedor.telefono|urlencode }}?text=Hola,%20me%20interesa%20tu%20anuncio%20de%20{{ producto.titulo|urlencode }}%20en%20el%20Marketplace." target="_blank" class="btn btn-success w-100 rounded-pill shadow-sm fw-bold">
+                                        <i class="fab fa-whatsapp me-2"></i> Contactar
+                                    </a>
+                                {% else %}
+                                    <button class="btn btn-secondary w-100 rounded-pill fw-bold" disabled>
+                                        <i class="fas fa-phone-slash me-2"></i> Sin Teléfono
+                                    </button>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-store-slash fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted fw-bold">No hay productos disponibles</h4>
+                <p>¡Anímate y sé el primero en publicar algo!</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

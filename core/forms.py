@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta, datetime
 # IMPORTANTE: Agregamos Usuario a esta lista y quitamos la importación de 'auth.User'
-from .models import Reserva, AreaSocial, BloqueoFecha, LecturaGas, Apartamento, Gasto, Aviso, Usuario, Incidencia, ReportePago, IngresoExtraordinario, Residencial, PlanSuscripcion
+from .models import Reserva, AreaSocial, BloqueoFecha, LecturaGas, Apartamento, Gasto, Aviso, Usuario, Incidencia, ReportePago, IngresoExtraordinario, Residencial, PlanSuscripcion, ProductoMarketplace, CategoriaMarketplace
 
 # ==========================================
 # 1. FORMULARIO DE RESERVAS
@@ -315,4 +315,24 @@ class ResidencialOnboardingForm(forms.ModelForm):
             'dia_corte': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 1'}),
             'dias_gracia': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 5'}),
             'porcentaje_mora': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 10'}),
+        }
+
+# ==========================================
+# 7. MARKETPLACE (Clasificados)
+# ==========================================
+class ProductoMarketplaceForm(forms.ModelForm):
+    class Meta:
+        model = ProductoMarketplace
+        fields = ['categoria', 'titulo', 'descripcion', 'precio', 'imagen']
+        widgets = {
+            'categoria': forms.Select(attrs={'class': 'form-select'}),
+            'titulo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Juego de Muebles de Sala'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Detalla el estado, uso, etc.'}),
+            'precio': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00'}),
+            'imagen': forms.FileInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'titulo': 'Título del Anuncio',
+            'descripcion': 'Descripción del Producto o Servicio',
+            'imagen': 'Foto del Producto'
         }

@@ -145,14 +145,25 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Esta línea es la MAGIA que hace que funcione en Railway
 # (Django >= 4.2 recomienda usar STORAGES para manejar tanto estáticos como media)
-STORAGES = {
-    "default": {
-        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-}
+if 'CLOUDINARY_URL' in os.environ:
+    STORAGES = {
+        "default": {
+            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+else:
+    # En desarrollo local (tu PC), guardamos en la carpeta /media/ normal
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
 
 # --- CONFIGURACIÓN PARA SUBIR FOTOS (MEDIA) ---
 MEDIA_URL = '/media/'
