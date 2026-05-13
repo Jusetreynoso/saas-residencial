@@ -43,8 +43,8 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'cloudinary_storage',
     'django.contrib.staticfiles',
+    'cloudinary_storage',
     'cloudinary',
     'core',
     'mathfilters',
@@ -154,6 +154,8 @@ if 'CLOUDINARY_URL' in os.environ:
             "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
         },
     }
+    # Mantenemos esto por compatibilidad con la librería de cloudinary que busca esta variable en su código interno
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 else:
     # En desarrollo local (tu PC), guardamos en la carpeta /media/ normal
     STORAGES = {
@@ -164,6 +166,7 @@ else:
             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
         },
     }
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # --- CONFIGURACIÓN PARA SUBIR FOTOS (MEDIA) ---
 MEDIA_URL = '/media/'
