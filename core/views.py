@@ -57,6 +57,9 @@ def dashboard(request):
         
         # --- ZONA DE ADMINISTRADOR ---
         if user.rol in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+            context['pagos_pendientes_count'] = ReportePago.objects.filter(residencial=user.residencial, estado='PENDIENTE').count()
+            context['tickets_pendientes_count'] = Incidencia.objects.filter(residencial=user.residencial, estado='PENDIENTE').count()
+            
             # A. Solicitudes Pendientes (Ya lo tenías)
             context['solicitudes_pendientes'] = Reserva.objects.filter(
                 residencial=user.residencial, 
@@ -85,6 +88,13 @@ def dashboard(request):
         ).aggregate(
             suma=Coalesce(Sum(Coalesce('saldo_pendiente', 'monto')), Decimal('0.00'))
         )['suma']
+
+        # NUEVO: Marketplace items (últimos 3 días)
+        hace_3_dias = timezone.now() - timedelta(days=3)
+        context['marketplace_nuevos_count'] = ProductoMarketplace.objects.filter(
+            estado='ACTIVO', 
+            fecha_publicacion__gte=hace_3_dias
+        ).exclude(vendedor=user).count()
 
     else:
         context['mensaje'] = "Usuario sin residencial asignado."

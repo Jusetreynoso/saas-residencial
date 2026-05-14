@@ -98,8 +98,14 @@
                     📸 Reportar Pago
                  </button>
 
-                 <a href="{% url 'marketplace_list' %}" class="btn btn-warning shadow-sm fw-bold">
+                 <a href="{% url 'marketplace_list' %}" class="btn btn-warning shadow-sm fw-bold position-relative">
                     🛒 Marketplace
+                    {% if marketplace_nuevos_count > 0 %}
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light">
+                        {{ marketplace_nuevos_count }}
+                        <span class="visually-hidden">anuncios nuevos</span>
+                    </span>
+                    {% endif %}
                  </a>
              </div>
         </div>
@@ -116,8 +122,14 @@
                         <h5 class="card-title text-success fw-bold">💰 Finanzas</h5>
                         <hr>
                         <div class="d-grid gap-2">
-                            <a href="{% url 'gestionar_reportes_pago' %}" class="btn btn-warning fw-bold text-dark">
+                            <a href="{% url 'gestionar_reportes_pago' %}" class="btn btn-warning fw-bold text-dark position-relative">
                                 📸 Validar Pagos (Pendientes)
+                                {% if pagos_pendientes_count > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light">
+                                    {{ pagos_pendientes_count }}
+                                    <span class="visually-hidden">pagos por validar</span>
+                                </span>
+                                {% endif %}
                             </a>
                             <div class="btn-group">
                                 <a href="{% url 'cuentas_por_cobrar' %}" class="btn btn-outline-success">💸 Cobros</a>
@@ -145,7 +157,15 @@
                         <div class="d-grid gap-2">
                             <div class="btn-group">
                                 <a href="{% url 'lista_vecinos' %}" class="btn btn-primary">👥 Vecinos</a>
-                                <a href="{% url 'gestionar_incidencias' %}" class="btn btn-outline-primary">🛠️ Tickets</a>
+                                <a href="{% url 'gestionar_incidencias' %}" class="btn btn-outline-primary position-relative">
+                                    🛠️ Tickets
+                                    {% if tickets_pendientes_count > 0 %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light">
+                                        {{ tickets_pendientes_count }}
+                                        <span class="visually-hidden">tickets pendientes</span>
+                                    </span>
+                                    {% endif %}
+                                </a>
                             </div>
                             
                             <a href="{% url 'registrar_lectura_gas' %}" class="btn btn-outline-warning text-dark fw-bold">
