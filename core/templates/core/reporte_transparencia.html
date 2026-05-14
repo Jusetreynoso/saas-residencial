@@ -92,16 +92,17 @@
                         {{ eficiencia|floatformat:1 }}%
                     </h1>
                     
+                    {% load l10n %}
                     <div class="progress mt-3" style="height: 25px;">
                         <div class="progress-bar {% if eficiencia >= 80 %}bg-success{% elif eficiencia >= 50 %}bg-warning{% else %}bg-danger{% endif %} progress-bar-striped progress-bar-animated" 
                              role="progressbar" 
-                             style="width: {{ eficiencia }}%;" 
-                             aria-valuenow="{{ eficiencia }}" aria-valuemin="0" aria-valuemax="100">
+                             style="width: {{ eficiencia|unlocalize }}%;" 
+                             aria-valuenow="{{ eficiencia|unlocalize }}" aria-valuemin="0" aria-valuemax="100">
                              {{ eficiencia|floatformat:0 }}%
                         </div>
                     </div>
                     <div class="text-center mt-2 small text-muted">
-                        Faltan por cobrar: <strong>${{ proyectado|add:"-"|add:recaudado|floatformat:2 }}</strong>
+                        Faltan por cobrar: <strong>${{ faltante|floatformat:2 }}</strong>
                     </div>
                 </div>
             </div>

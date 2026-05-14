@@ -1672,6 +1672,7 @@ def reporte_transparencia(request):
         'proyectado': proyectado,
         'recaudado': float(recaudado),
         'eficiencia': float(eficiencia),
+        'faltante': float(proyectado) - float(recaudado),
         
         'total_gastos': total_gastos,
         'lista_gastos_tabla': lista_gastos_tabla,
