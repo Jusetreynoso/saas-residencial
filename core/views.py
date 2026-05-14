@@ -1710,19 +1710,34 @@ def ver_bitacora(request):
 
 @login_required
 def marketplace_list(request):
-    # Marketplace global: muestra todos los productos ACTIVOS de todos los residenciales
-    productos = ProductoMarketplace.objects.filter(estado='ACTIVO').order_by('-fecha_publicacion')
+    from django.utils import timezone
+    hoy = timezone.now()
+    
+    # Marketplace global: muestra todos los productos ACTIVOS de todos los residenciales que no han expirado
+    productos_activos = ProductoMarketplace.objects.filter(
+        estado='ACTIVO', 
+        fecha_expiracion__gte=hoy
+    ).order_by('-fecha_publicacion')
+    
     categorias = CategoriaMarketplace.objects.all()
 
     # Filtro por categoría opcional
     cat_id = request.GET.get('categoria')
     if cat_id:
-        productos = productos.filter(categoria_id=cat_id)
+        productos_activos = productos_activos.filter(categoria_id=cat_id)
+        
+    # Anuncios vencidos propios del usuario actual
+    productos_vencidos = ProductoMarketplace.objects.filter(
+        vendedor=request.user,
+        estado='VENCIDO'
+    ).order_by('-fecha_publicacion')
 
     return render(request, 'core/marketplace/marketplace_list.html', {
-        'productos': productos,
+        'productos': productos_activos,
+        'productos_vencidos': productos_vencidos,
         'categorias': categorias,
         'cat_id': cat_id,
+        'hoy': hoy,
     })
 
 @login_required
@@ -1765,4 +1780,23 @@ def producto_borrar(request, producto_id):
         messages.success(request, '🗑️ Producto eliminado del Marketplace.')
     else:
         messages.error(request, 'No tienes permiso para borrar esto.')
+    return redirect('marketplace_list')
+
+@login_required
+def producto_republicar(request, producto_id):
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    producto = get_object_or_404(ProductoMarketplace, pk=producto_id, vendedor=request.user)
+    
+    if producto.estado == 'VENCIDO':
+        producto.estado = 'ACTIVO'
+        producto.fecha_expiracion = timezone.now() + timedelta(days=30)
+        # Si queremos que vuelva a aparecer arriba en los listados, actualizamos fecha_publicacion
+        producto.fecha_publicacion = timezone.now()
+        producto.save()
+        messages.success(request, '🚀 Tu anuncio ha sido republicado por 30 días más.')
+    else:
+        messages.error(request, 'Este anuncio no está vencido.')
+        
     return redirect('marketplace_list')

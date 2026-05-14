@@ -92,6 +92,7 @@ urlpatterns = [
     path('marketplace/nuevo/', views.producto_crear, name='producto_crear'),
     path('marketplace/editar/<int:producto_id>/', views.producto_editar, name='producto_editar'),
     path('marketplace/borrar/<int:producto_id>/', views.producto_borrar, name='producto_borrar'),
+    path('marketplace/republicar/<int:producto_id>/', views.producto_republicar, name='producto_republicar'),
 
     # --- MÓDULO SAAS (SUPERADMIN) ---
     path('saas/dashboard/', views_saas.superadmin_dashboard, name='superadmin_dashboard'),

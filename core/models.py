@@ -385,7 +385,8 @@ class ProductoMarketplace(models.Model):
     ESTADOS = [
         ('ACTIVO', 'Activo'),
         ('VENDIDO', 'Vendido'),
-        ('INACTIVO', 'Inactivo (Pausado)')
+        ('INACTIVO', 'Inactivo (Pausado)'),
+        ('VENCIDO', 'Vencido (Expirado)')
     ]
     
     # Aunque es global, guardamos el residencial del vendedor para mostrar "Ubicación"
@@ -400,6 +401,23 @@ class ProductoMarketplace(models.Model):
     
     estado = models.CharField(max_length=20, choices=ESTADOS, default='ACTIVO')
     fecha_publicacion = models.DateTimeField(auto_now_add=True)
+    fecha_expiracion = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        # Si el producto es nuevo o se va a republicar, asegurar que la fecha de expiración sea a 30 días
+        if not self.fecha_expiracion:
+            from django.utils import timezone
+            from datetime import timedelta
+            self.fecha_expiracion = timezone.now() + timedelta(days=30)
+            
+        # Si la fecha de expiración ya pasó y sigue ACTIVO, lo pasamos a VENCIDO
+        # (Esto es una protección adicional, aunque el limpiador o las vistas también filtren)
+        if self.fecha_expiracion and self.pk:
+            from django.utils import timezone
+            if self.fecha_expiracion < timezone.now() and self.estado == 'ACTIVO':
+                self.estado = 'VENCIDO'
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.titulo} - {self.vendedor.username}"
