@@ -94,6 +94,11 @@ urlpatterns = [
     path('marketplace/borrar/<int:producto_id>/', views.producto_borrar, name='producto_borrar'),
     path('marketplace/republicar/<int:producto_id>/', views.producto_republicar, name='producto_republicar'),
 
+    # --- MÓDULO DE RECURSOS HUMANOS Y NÓMINA ---
+    path('rrhh/directorio/', views.directorio_personal, name='directorio_personal'),
+    path('rrhh/pagar/<int:empleado_id>/', views.procesar_pago_empleado, name='procesar_pago_empleado'),
+    path('rrhh/comprobante/<int:pago_id>/', views.comprobante_nomina, name='comprobante_nomina'),
+
     # --- MÓDULO SAAS (SUPERADMIN) ---
     path('saas/dashboard/', views_saas.superadmin_dashboard, name='superadmin_dashboard'),
     path('saas/analitica/', views_saas.reporte_inteligencia, name='reporte_inteligencia'),

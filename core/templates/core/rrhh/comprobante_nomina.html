@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Comprobante de Pago - {{ pago.empleado.nombre_completo }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+        .invoice-container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: #fff;
+            padding: 40px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-top: 10px solid #0d6efd;
+        }
+        .signature-line {
+            border-top: 1px solid #000;
+            width: 250px;
+            margin: 60px auto 10px auto;
+        }
+        @media print {
+            body { background-color: #fff; }
+            .invoice-container { 
+                box-shadow: none; 
+                margin: 0; 
+                padding: 20px; 
+                border-top: none;
+            }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="text-center mt-3 no-print">
+    <button onclick="window.print()" class="btn btn-primary fw-bold px-4 rounded-pill shadow-sm">
+        <i class="fas fa-print me-2"></i> Imprimir o Guardar en PDF
+    </button>
+</div>
+
+<div class="invoice-container">
+    <div class="row mb-5 pb-4 border-bottom">
+        <div class="col-sm-6">
+            <h2 class="fw-bold text-uppercase mb-0">{{ residencial.nombre }}</h2>
+            <p class="text-muted mb-0">Comprobante de Pago de Nómina</p>
+        </div>
+        <div class="col-sm-6 text-sm-end mt-3 mt-sm-0">
+            <h5 class="fw-bold mb-1">Volante No. #{{ pago.id|stringformat:"05d" }}</h5>
+            <p class="mb-0"><strong>Fecha de Emisión:</strong> {{ pago.fecha_pago|date:"d M Y, h:i A" }}</p>
+            <p class="mb-0"><strong>Periodo Pagsdo:</strong> {{ pago.periodo }}</p>
+        </div>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-sm-12">
+            <h5 class="fw-bold bg-light p-2 rounded">Datos del Empleado</h5>
+            <table class="table table-borderless table-sm mb-0">
+                <tr>
+                    <td width="25%" class="text-muted">Nombre Completo:</td>
+                    <td class="fw-bold fs-5">{{ pago.empleado.nombre_completo }}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Cédula:</td>
+                    <td>{{ pago.empleado.cedula|default:"N/A" }}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Cargo:</td>
+                    <td>{{ pago.empleado.get_cargo_display }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <h5 class="fw-bold bg-light p-2 rounded mb-3">Desglose de Ingresos</h5>
+    <table class="table table-bordered">
+        <thead class="table-light">
+            <tr>
+                <th>Concepto</th>
+                <th class="text-end" width="30%">Monto ($)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Salario Base Fijo</td>
+                <td class="text-end">${{ pago.salario_base_pagado|floatformat:2 }}</td>
+            </tr>
+            {% if pago.monto_extra > 0 %}
+            <tr>
+                <td>Ingreso Extra: <em>{{ pago.concepto_extra }}</em></td>
+                <td class="text-end">${{ pago.monto_extra|floatformat:2 }}</td>
+            </tr>
+            {% endif %}
+        </tbody>
+        <tfoot>
+            <tr class="table-primary">
+                <td class="text-end fw-bold">TOTAL NETO A PAGAR:</td>
+                <td class="text-end fw-bold fs-5">${{ pago.monto_total|floatformat:2 }}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="mt-5 text-center text-muted small">
+        <p>Certifico que he recibido el pago total de la cantidad arriba especificada en conformidad con mis servicios prestados.</p>
+        
+        <div class="signature-line"></div>
+        <p class="fw-bold mb-0">Firma del Empleado</p>
+        <p>Cédula: __________________________</p>
+    </div>
+</div>
+
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</body>
+</html>

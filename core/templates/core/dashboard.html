@@ -155,8 +155,11 @@
                         <h5 class="card-title text-primary fw-bold">👥 Gestión</h5>
                         <hr>
                         <div class="d-grid gap-2">
+                            <a href="{% url 'directorio_personal' %}" class="btn btn-primary fw-bold">
+                                👥 Directorio de Personal / Nómina
+                            </a>
                             <div class="btn-group">
-                                <a href="{% url 'lista_vecinos' %}" class="btn btn-primary">👥 Vecinos</a>
+                                <a href="{% url 'lista_vecinos' %}" class="btn btn-outline-primary">👥 Vecinos</a>
                                 <a href="{% url 'gestionar_incidencias' %}" class="btn btn-outline-primary position-relative">
                                     🛠️ Tickets
                                     {% if tickets_pendientes_count > 0 %}

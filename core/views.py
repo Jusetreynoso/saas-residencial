@@ -25,10 +25,13 @@ from .forms import (
     AbonoForm,
     ReportePagoForm,
     IngresoExtraForm,
-    ProductoMarketplaceForm
+    ProductoMarketplaceForm,
+    EmpleadoForm,
+    PagoNominaForm
 )
 
-from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia, ReportePago, IngresoExtraordinario, Bitacora, ProductoMarketplace, CategoriaMarketplace
+from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia, ReportePago, IngresoExtraordinario, Bitacora, ProductoMarketplace, CategoriaMarketplace, Empleado, PagoNomina
+from django.db import transaction
 from django.db.models import Sum, Max, Count, Q, F, Case, When, Value
 from django.db.models.functions import TruncMonth, Coalesce
 from itertools import chain
@@ -1811,3 +1814,99 @@ def producto_republicar(request, producto_id):
         messages.error(request, 'Este anuncio no está vencido.')
         
     return redirect('marketplace_list')
+
+# ---------------------------------------------------------
+# MÓDULO DE RECURSOS HUMANOS Y NÓMINA
+# ---------------------------------------------------------
+
+@login_required
+def directorio_personal(request):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        messages.error(request, "Acceso denegado.")
+        return redirect('dashboard')
+        
+    empleados = Empleado.objects.filter(residencial=request.user.residencial)
+    
+    if request.method == 'POST':
+        form = EmpleadoForm(request.POST)
+        if form.is_valid():
+            empleado = form.save(commit=False)
+            empleado.residencial = request.user.residencial
+            empleado.save()
+            messages.success(request, "Empleado registrado correctamente.")
+            return redirect('directorio_personal')
+    else:
+        form = EmpleadoForm()
+        
+    return render(request, 'core/rrhh/directorio_personal.html', {
+        'empleados': empleados,
+        'form': form
+    })
+
+@login_required
+def procesar_pago_empleado(request, empleado_id):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        messages.error(request, "Acceso denegado.")
+        return redirect('dashboard')
+        
+    empleado = get_object_or_404(Empleado, pk=empleado_id, residencial=request.user.residencial)
+    
+    # Pre-cargar el formulario con el periodo actual
+    import locale
+    try:
+        locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+    except:
+        pass
+        
+    mes_actual = timezone.now().strftime("%B %Y").capitalize()
+    
+    if request.method == 'POST':
+        form = PagoNominaForm(request.POST)
+        if form.is_valid():
+            pago = form.save(commit=False)
+            pago.empleado = empleado
+            pago.salario_base_pagado = empleado.salario_base
+            pago.monto_total = pago.salario_base_pagado + pago.monto_extra
+            
+            try:
+                # LA REGLA DE ORO: Doble Asiento Automático usando Transacción
+                with transaction.atomic():
+                    # 1. Crear el Gasto
+                    desc_extra = f" + {pago.concepto_extra}" if pago.monto_extra > 0 else ""
+                    gasto_nomina = Gasto.objects.create(
+                        residencial=request.user.residencial,
+                        descripcion=f"Pago de nómina: {empleado.nombre_completo} - {pago.periodo}{desc_extra}",
+                        monto=pago.monto_total,
+                        fecha_gasto=timezone.now().date(),
+                        categoria='NOMINA'
+                    )
+                    
+                    # 2. Vincular y Guardar el Pago
+                    pago.gasto_asociado = gasto_nomina
+                    pago.save()
+                    
+                messages.success(request, f"Pago de nómina para {empleado.nombre_completo} procesado y contabilizado exitosamente.")
+                return redirect('directorio_personal')
+                
+            except Exception as e:
+                messages.error(request, f"Error al procesar el pago: {str(e)}")
+    else:
+        form = PagoNominaForm(initial={'periodo': mes_actual})
+        
+    return render(request, 'core/rrhh/pago_nomina_form.html', {
+        'form': form,
+        'empleado': empleado
+    })
+
+@login_required
+def comprobante_nomina(request, pago_id):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        messages.error(request, "Acceso denegado.")
+        return redirect('dashboard')
+        
+    pago = get_object_or_404(PagoNomina, pk=pago_id, empleado__residencial=request.user.residencial)
+    
+    return render(request, 'core/rrhh/comprobante_nomina.html', {
+        'pago': pago,
+        'residencial': request.user.residencial
+    })

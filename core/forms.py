@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta, datetime
 # IMPORTANTE: Agregamos Usuario a esta lista y quitamos la importación de 'auth.User'
-from .models import Reserva, AreaSocial, BloqueoFecha, LecturaGas, Apartamento, Gasto, Aviso, Usuario, Incidencia, ReportePago, IngresoExtraordinario, Residencial, PlanSuscripcion, ProductoMarketplace, CategoriaMarketplace
+from .models import Reserva, AreaSocial, BloqueoFecha, LecturaGas, Apartamento, Gasto, Aviso, Usuario, Incidencia, ReportePago, IngresoExtraordinario, Residencial, PlanSuscripcion, ProductoMarketplace, CategoriaMarketplace, Empleado, PagoNomina
 
 # ==========================================
 # 1. FORMULARIO DE RESERVAS
@@ -335,4 +335,31 @@ class ProductoMarketplaceForm(forms.ModelForm):
             'titulo': 'Título del Anuncio',
             'descripcion': 'Descripción del Producto o Servicio',
             'imagen': 'Foto del Producto'
-        }
+        }
+
+# ---------------------------------------------------------
+# MÓDULO DE RECURSOS HUMANOS Y NÓMINA
+# ---------------------------------------------------------
+
+class EmpleadoForm(forms.ModelForm):
+    class Meta:
+        model = Empleado
+        fields = ['nombre_completo', 'cedula', 'cargo', 'salario_base', 'fecha_contratacion', 'activo']
+        widgets = {
+            'nombre_completo': forms.TextInput(attrs={'class': 'form-control'}),
+            'cedula': forms.TextInput(attrs={'class': 'form-control'}),
+            'cargo': forms.Select(attrs={'class': 'form-select'}),
+            'salario_base': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'fecha_contratacion': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'})
+        }
+
+class PagoNominaForm(forms.ModelForm):
+    class Meta:
+        model = PagoNomina
+        fields = ['periodo', 'monto_extra', 'concepto_extra']
+        widgets = {
+            'periodo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Mayo 2026'}),
+            'monto_extra': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'concepto_extra': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Bono por limpieza'}),
+        }

@@ -423,6 +423,47 @@ class ProductoMarketplace(models.Model):
         return f"{self.titulo} - {self.vendedor.username}"
 
 # ---------------------------------------------------------
+# 7. Módulo de Recursos Humanos y Nómina
+# ---------------------------------------------------------
+
+class Empleado(models.Model):
+    CARGOS = [
+        ('CONSERJE', 'Conserje'),
+        ('SEGURIDAD', 'Seguridad / Vigilante'),
+        ('JARDINERO', 'Jardinero'),
+        ('MANTENIMIENTO', 'Mantenimiento General'),
+        ('ADMINISTRATIVO', 'Administrativo'),
+        ('OTRO', 'Otro')
+    ]
+
+    residencial = models.ForeignKey(Residencial, on_delete=models.CASCADE, related_name='empleados')
+    nombre_completo = models.CharField(max_length=150)
+    cedula = models.CharField(max_length=20, blank=True, null=True, help_text="Cédula o Pasaporte")
+    cargo = models.CharField(max_length=50, choices=CARGOS, default='CONSERJE')
+    salario_base = models.DecimalField(max_digits=10, decimal_places=2, help_text="Salario mensual base")
+    fecha_contratacion = models.DateField(default=timezone.now)
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.nombre_completo} - {self.get_cargo_display()}"
+
+class PagoNomina(models.Model):
+    empleado = models.ForeignKey(Empleado, on_delete=models.CASCADE, related_name='pagos')
+    fecha_pago = models.DateTimeField(auto_now_add=True)
+    periodo = models.CharField(max_length=50, help_text="Ej: Mayo 2026")
+    
+    salario_base_pagado = models.DecimalField(max_digits=10, decimal_places=2)
+    monto_extra = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    concepto_extra = models.CharField(max_length=200, blank=True, null=True, help_text="Ej: Bono por limpieza profunda")
+    monto_total = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Vinculación directa con la contabilidad
+    gasto_asociado = models.OneToOneField('Gasto', on_delete=models.SET_NULL, null=True, blank=True, related_name='pago_nomina_origen')
+
+    def __str__(self):
+        return f"Pago {self.periodo} a {self.empleado.nombre_completo} (${self.monto_total})"
+
+# ---------------------------------------------------------
 # MÓDULO SAAS (Facturación Interna de la Plataforma)
 # ---------------------------------------------------------
 
