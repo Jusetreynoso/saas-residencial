@@ -136,6 +136,12 @@ USE_I18N = True
 
 USE_TZ = True
 
+# Overrides de formatos regionales (ej. para que es-do use comas y puntos americanos)
+USE_THOUSAND_SEPARATOR = True
+FORMAT_MODULE_PATH = [
+    'core.formats',
+]
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/

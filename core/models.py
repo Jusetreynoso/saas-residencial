@@ -451,6 +451,7 @@ class PagoNomina(models.Model):
     TIPOS_PAGO = [
         ('MENSUAL', 'Mensual (100% Salario)'),
         ('QUINCENAL', 'Quincena (50% Salario)'),
+        ('DOBLE_SUELDO', 'Doble Sueldo / Regalía (100% Salario)'),
     ]
 
     empleado = models.ForeignKey(Empleado, on_delete=models.CASCADE, related_name='pagos')
