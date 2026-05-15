@@ -52,7 +52,8 @@
         <div class="col-sm-6 text-sm-end mt-3 mt-sm-0">
             <h5 class="fw-bold mb-1">Volante No. #{{ pago.id|stringformat:"05d" }}</h5>
             <p class="mb-0"><strong>Fecha de Emisión:</strong> {{ pago.fecha_pago|date:"d M Y, h:i A" }}</p>
-            <p class="mb-0"><strong>Periodo Pagsdo:</strong> {{ pago.periodo }}</p>
+            <p class="mb-0"><strong>Periodo Pagado:</strong> {{ pago.periodo }}</p>
+            <p class="mb-0 text-primary"><strong>Tipo de Pago:</strong> {{ pago.get_tipo_pago_display }}</p>
         </div>
     </div>
 

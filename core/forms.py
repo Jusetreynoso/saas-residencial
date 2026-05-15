@@ -357,8 +357,9 @@ class EmpleadoForm(forms.ModelForm):
 class PagoNominaForm(forms.ModelForm):
     class Meta:
         model = PagoNomina
-        fields = ['periodo', 'monto_extra', 'concepto_extra']
+        fields = ['tipo_pago', 'periodo', 'monto_extra', 'concepto_extra']
         widgets = {
+            'tipo_pago': forms.Select(attrs={'class': 'form-select', 'id': 'id_tipo_pago'}),
             'periodo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Mayo 2026'}),
             'monto_extra': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'concepto_extra': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Bono por limpieza'}),

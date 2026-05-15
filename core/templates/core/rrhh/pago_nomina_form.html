@@ -57,18 +57,26 @@
             <form method="POST">
                 {% csrf_token %}
                 
-                <div class="mb-4">
-                    <label class="form-label fw-bold text-muted">Periodo de Pago</label>
-                    {{ form.periodo }}
-                    <div class="form-text">Mes al que corresponde este pago.</div>
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <label class="form-label fw-bold text-muted">Tipo de Pago</label>
+                        {{ form.tipo_pago }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-muted">Periodo de Pago</label>
+                        {{ form.periodo }}
+                    </div>
                 </div>
 
                 <div class="row mb-4 align-items-center">
                     <div class="col-8">
-                        <h5 class="fw-bold text-dark mb-0">Salario Base (Fijo)</h5>
+                        <h5 class="fw-bold text-dark mb-0">Salario Base a Pagar</h5>
+                        <small class="text-muted" id="salarioSugerencia">Salario total del empleado: ${{ empleado.salario_base|floatformat:2 }}</small>
                     </div>
                     <div class="col-4 text-end">
-                        <h5 class="fw-bold text-success mb-0">${{ empleado.salario_base|floatformat:2 }}</h5>
+                        <h5 class="fw-bold text-success mb-0" id="salarioVisual">
+                            ${{ empleado.salario_base|floatformat:2 }}
+                        </h5>
                     </div>
                 </div>
                 
@@ -99,5 +107,28 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const tipoPagoSelect = document.getElementById("id_tipo_pago");
+        const salarioVisual = document.getElementById("salarioVisual");
+        
+        // Obtenemos el salario numérico puro del backend
+        const salarioBaseText = "{{ empleado.salario_base|escapejs }}";
+        const salarioBase = parseFloat(salarioBaseText.replace(',', '.'));
+        
+        tipoPagoSelect.addEventListener("change", function() {
+            let aPagar = salarioBase;
+            if (this.value === "QUINCENAL") {
+                aPagar = salarioBase / 2.0;
+            }
+            
+            // Formatear a 2 decimales para mostrarlo
+            salarioVisual.innerText = "$" + aPagar.toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        });
+        
+        // Trigger inicial por si recarga en Quincenal
+        tipoPagoSelect.dispatchEvent(new Event('change'));
+    });
+</script>
 </body>
 </html>

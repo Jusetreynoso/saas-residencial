@@ -448,9 +448,15 @@ class Empleado(models.Model):
         return f"{self.nombre_completo} - {self.get_cargo_display()}"
 
 class PagoNomina(models.Model):
+    TIPOS_PAGO = [
+        ('MENSUAL', 'Mensual (100% Salario)'),
+        ('QUINCENAL', 'Quincena (50% Salario)'),
+    ]
+
     empleado = models.ForeignKey(Empleado, on_delete=models.CASCADE, related_name='pagos')
     fecha_pago = models.DateTimeField(auto_now_add=True)
     periodo = models.CharField(max_length=50, help_text="Ej: Mayo 2026")
+    tipo_pago = models.CharField(max_length=20, choices=TIPOS_PAGO, default='MENSUAL')
     
     salario_base_pagado = models.DecimalField(max_digits=10, decimal_places=2)
     monto_extra = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)

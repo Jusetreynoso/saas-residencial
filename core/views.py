@@ -1865,7 +1865,13 @@ def procesar_pago_empleado(request, empleado_id):
         if form.is_valid():
             pago = form.save(commit=False)
             pago.empleado = empleado
-            pago.salario_base_pagado = empleado.salario_base
+            
+            # CÁLCULO QUINCENAL (50%)
+            if pago.tipo_pago == 'QUINCENAL':
+                pago.salario_base_pagado = empleado.salario_base / Decimal('2.00')
+            else:
+                pago.salario_base_pagado = empleado.salario_base
+                
             pago.monto_total = pago.salario_base_pagado + pago.monto_extra
             
             try:
@@ -1875,7 +1881,7 @@ def procesar_pago_empleado(request, empleado_id):
                     desc_extra = f" + {pago.concepto_extra}" if pago.monto_extra > 0 else ""
                     gasto_nomina = Gasto.objects.create(
                         residencial=request.user.residencial,
-                        descripcion=f"Pago de nómina: {empleado.nombre_completo} - {pago.periodo}{desc_extra}",
+                        descripcion=f"Pago de nómina ({pago.get_tipo_pago_display()}): {empleado.nombre_completo} - {pago.periodo}{desc_extra}",
                         monto=pago.monto_total,
                         fecha_gasto=timezone.now().date(),
                         categoria='NOMINA'
