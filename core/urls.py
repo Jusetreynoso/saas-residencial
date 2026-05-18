@@ -34,6 +34,8 @@ urlpatterns = [
 
     path('finanzas/pagar/<int:factura_id>/', views.registrar_pago, name='registrar_pago'),
 
+    path('finanzas/anular-pago/<int:factura_id>/', views.anular_pago, name='anular_pago'),
+
     path('finanzas/gastos/nuevo/', views.registrar_gasto, name='registrar_gasto'),
 
     path('finanzas/reporte/', views.reporte_financiero, name='reporte_financiero'),

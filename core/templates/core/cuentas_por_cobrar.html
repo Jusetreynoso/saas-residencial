@@ -150,6 +150,84 @@
             </div>
         </div>
     </div>
+
+    <!-- SECCIÓN NUEVA: HISTORIAL DE COBROS -->
+    <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
+        <h3 class="mb-0 text-success"><i class="bi bi-clock-history"></i> Historial de Cobros Recientes</h3>
+    </div>
+
+    <div class="card shadow mb-5">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-success">
+                        <tr>
+                            <th>Apto</th>
+                            <th>Residente</th>
+                            <th>Concepto Pagado</th>
+                            <th>Fecha de Pago</th>
+                            <th>Monto</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pago in pagos_recientes %}
+                        <tr>
+                            <td class="fw-bold fs-6 bg-light">
+                                {% if pago.usuario.apartamento %}
+                                    {{ pago.usuario.apartamento.numero }}
+                                {% else %}
+                                    <span class="badge bg-secondary">N/A</span>
+                                {% endif %}
+                            </td>
+                            
+                            <td>
+                                {{ pago.usuario.first_name }} {{ pago.usuario.last_name }}
+                            </td>
+
+                            <td>
+                                {% if pago.tipo == 'GAS' %}
+                                    <span class="badge bg-warning text-dark">🔥 Gas</span>
+                                {% else %}
+                                    <span class="badge bg-primary">🏢 Cuota</span>
+                                {% endif %}
+                                <div class="small text-muted">{{ pago.concepto }}</div>
+                            </td>
+
+                            <td>
+                                {{ pago.fecha_pago|date:"d M Y" }}
+                            </td>
+
+                            <td>
+                                <span class="fw-bold text-success fs-6">
+                                    ${{ pago.monto_pagado }}
+                                </span>
+                            </td>
+
+                            <td class="text-end">
+                                <a href="{% url 'ver_recibo' pago.id %}" target="_blank" class="btn btn-outline-primary btn-sm me-1" title="Ver o Imprimir Recibo">
+                                    <i class="bi bi-receipt"></i> Recibo
+                                </a>
+                                <a href="{% url 'anular_pago' pago.id %}" class="btn btn-outline-danger btn-sm" title="Anular Pago" onclick="return confirm('¿Estás seguro de que quieres anular este pago? Volverá a aparecer como deuda pendiente.');">
+                                    <i class="bi bi-x-circle"></i> Anular
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center p-4">
+                                <div class="text-muted">
+                                    <i class="bi bi-info-circle fs-3"></i>
+                                    <p class="mt-2">Aún no hay cobros registrados recientemente.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="modal fade" id="modalRegistrarPago" tabindex="-1" aria-hidden="true">

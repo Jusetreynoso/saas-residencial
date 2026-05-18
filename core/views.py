@@ -511,11 +511,52 @@ def cuentas_por_cobrar(request):
     
     total_por_cobrar = deudas.aggregate(suma=Coalesce(Sum('monto'), Decimal('0.00')))['suma']
 
+    pagos_recientes = Factura.objects.filter(
+        residencial=request.user.residencial,
+        estado='PAGADO'
+    ).order_by('-fecha_pago', '-id')[:50]
+
     return render(request, 'core/cuentas_por_cobrar.html', {
         'deudas': deudas,
         'total_por_cobrar': total_por_cobrar,
+        'pagos_recientes': pagos_recientes,
         'today': timezone.now().date()
     })
+
+@login_required
+def anular_pago(request, factura_id):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+    
+    factura = get_object_or_404(Factura, pk=factura_id, residencial=request.user.residencial)
+    
+    if factura.estado != 'PAGADO':
+        messages.error(request, "Esta factura no está pagada.")
+        return redirect('cuentas_por_cobrar')
+
+    monto_anulado = factura.monto_pagado
+    
+    factura.estado = 'PENDIENTE'
+    factura.monto_pagado = 0
+    factura.saldo_pendiente = factura.monto
+    factura.fecha_pago = None
+    factura.save()
+    
+    vecino = factura.usuario
+    numero_apto = vecino.apartamento.numero if vecino.apartamento else "S/A"
+
+    Bitacora.objects.create(
+        residencial=request.user.residencial,
+        usuario=request.user,
+        modulo='FINANZAS',
+        accion=f"Anuló el pago de ${monto_anulado} de la factura '{factura.concepto}' del Apto {numero_apto}.",
+        nivel='WARNING'
+    )
+    
+    messages.success(request, f"Pago de '{factura.concepto}' anulado correctamente.")
+    messages.warning(request, "⚠️ Si este pago generó un 'Saldo a Favor' o se distribuyó en múltiples cuotas, revisa y ajusta el saldo manualmente desde el perfil del residente.")
+    
+    return redirect('cuentas_por_cobrar')
 
 # En core/views.py
 
