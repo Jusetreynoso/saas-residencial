@@ -59,7 +59,26 @@
         {% endfor %}
     {% endif %}
 
-    <div class="card shadow">
+    <!-- PESTAÑAS (TABS) DE NAVEGACIÓN -->
+    <ul class="nav nav-tabs mb-4" id="cobrosTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-bold text-danger" id="pendientes-tab" data-bs-toggle="tab" data-bs-target="#pendientes" type="button" role="tab" aria-controls="pendientes" aria-selected="true">
+                <i class="bi bi-exclamation-circle"></i> Deudas Pendientes
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold text-success" id="historial-tab" data-bs-toggle="tab" data-bs-target="#historial" type="button" role="tab" aria-controls="historial" aria-selected="false">
+                <i class="bi bi-clock-history"></i> Historial de Cobros Recientes
+            </button>
+        </li>
+    </ul>
+
+    <!-- CONTENIDO DE LAS PESTAÑAS -->
+    <div class="tab-content" id="cobrosTabsContent">
+        
+        <!-- PESTAÑA 1: DEUDAS PENDIENTES -->
+        <div class="tab-pane fade show active" id="pendientes" role="tabpanel" aria-labelledby="pendientes-tab">
+            <div class="card shadow mb-5">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0 align-middle">
@@ -150,13 +169,11 @@
             </div>
         </div>
     </div>
+        </div> <!-- Fin Pestaña 1 -->
 
-    <!-- SECCIÓN NUEVA: HISTORIAL DE COBROS -->
-    <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
-        <h3 class="mb-0 text-success"><i class="bi bi-clock-history"></i> Historial de Cobros Recientes</h3>
-    </div>
-
-    <div class="card shadow mb-5">
+        <!-- PESTAÑA 2: HISTORIAL DE COBROS -->
+        <div class="tab-pane fade" id="historial" role="tabpanel" aria-labelledby="historial-tab">
+            <div class="card shadow mb-5">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0 align-middle">
@@ -228,6 +245,9 @@
             </div>
         </div>
     </div>
+        </div> <!-- Fin Pestaña 2 -->
+        
+    </div> <!-- Fin del Tab Content -->
 </div>
 
 <div class="modal fade" id="modalRegistrarPago" tabindex="-1" aria-hidden="true">
