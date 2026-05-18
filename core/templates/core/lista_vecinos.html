@@ -40,7 +40,7 @@
             <p class="text-muted">Directorio de residentes y estado de cuentas</p>
         </div>
         <a href="{% url 'crear_vecino' %}" class="btn btn-primary fw-bold">
-            + Registrar Nuevo Vecino
+            + Registrar Nuevo Usuario / Vecino
         </a>
     </div>
     
@@ -105,6 +105,10 @@
                             <td>
                                 {% if vecino.rol == 'ADMIN_RESIDENCIAL' %}
                                     <span class="badge bg-primary">Admin</span>
+                                {% elif vecino.rol == 'SEGURIDAD' %}
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-shield-lock"></i> Seguridad</span>
+                                {% elif vecino.rol == 'ASISTENTE' %}
+                                    <span class="badge bg-info text-dark">Asistente</span>
                                 {% else %}
                                     <span class="badge bg-success">Residente</span>
                                 {% endif %}

@@ -35,7 +35,7 @@
 <div class="container mt-5" style="max-width: 600px;">
     <div class="card shadow">
         <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">👤 Registrar Nuevo Vecino</h4>
+            <h4 class="mb-0">👤 Registrar Nuevo Usuario</h4>
         </div>
         <div class="card-body">
             <form method="post">
@@ -59,6 +59,10 @@
                     <label class="form-label">Contraseña Inicial</label>
                     {{ form.password }}
                 </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Rol del Usuario</label>
+                    {{ form.rol }}
+                </div>
                 <hr>
                 <div class="mb-3">
                     <label class="form-label fw-bold">Apartamento</label>
@@ -76,7 +80,7 @@
                 </div>
 
                 <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary btn-lg">Guardar Vecino</button>
+                    <button type="submit" class="btn btn-primary btn-lg">Guardar Usuario</button>
                     <a href="{% url 'lista_vecinos' %}" class="btn btn-outline-secondary">Cancelar</a>
                 </div>
             </form>
