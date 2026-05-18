@@ -44,50 +44,7 @@
                                     </button>
                                 </td>
                             </tr>
-                            
-                            <!-- Modal Edit Plan -->
-                            <div class="modal fade" id="editPlanModal{{ plan.id }}" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Editar Plan: {{ plan.nombre }}</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <form action="{% url 'editar_plan' plan.id %}" method="post">
-                                                {% csrf_token %}
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold small">NOMBRE DEL PLAN</label>
-                                                    <input type="text" name="nombre" class="form-control" value="{{ plan.nombre }}" required>
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold small">PRECIO POR APARTAMENTO ($)</label>
-                                                    <input type="number" step="0.01" name="precio_por_apartamento" class="form-control" value="{{ plan.precio_por_apartamento|stringformat:'s' }}" required>
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold small">PRECIO ADMIN EXTRA ($)</label>
-                                                    <input type="number" step="0.01" name="precio_usuario_extra" class="form-control" value="{{ plan.precio_usuario_extra|stringformat:'s' }}" required>
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold small">DÍAS DE PRUEBA (TRIAL)</label>
-                                                    <input type="number" name="dias_prueba_default" class="form-control" value="{{ plan.dias_prueba_default }}" required>
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold small">PRECIO MÓDULO SEGURIDAD ($)</label>
-                                                    <input type="number" step="0.01" name="precio_modulo_seguridad" class="form-control" value="{{ plan.precio_modulo_seguridad|stringformat:'s' }}" required>
-                                                </div>
-                                                <div class="mb-4 form-check form-switch">
-                                                    <input class="form-check-input" type="checkbox" name="activo" id="activoPlan{{ plan.id }}" {% if plan.activo %}checked{% endif %}>
-                                                    <label class="form-check-label" for="activoPlan{{ plan.id }}">Plan Activo</label>
-                                                </div>
-                                                <button type="submit" class="btn btn-primary w-100">Guardar Cambios</button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- End Modal -->
-                            
+
                             {% empty %}
                             <tr>
                                 <td colspan="7" class="text-center py-5 text-muted">
@@ -131,6 +88,49 @@
                         <input type="number" step="0.01" name="precio_modulo_seguridad" class="form-control" placeholder="15.00" value="15.00" required>
                     </div>
                     <button type="submit" class="btn btn-primary w-100 fw-bold">Crear Plan</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals de Edición (Fuera de table-responsive) -->
+{% for plan in planes %}
+<div class="modal fade" id="editPlanModal{{ plan.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-pencil-square me-2"></i>Editar Plan: {{ plan.nombre }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{% url 'editar_plan' plan.id %}" method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">NOMBRE DEL PLAN</label>
+                        <input type="text" name="nombre" class="form-control" value="{{ plan.nombre }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">PRECIO POR APARTAMENTO ($)</label>
+                        <input type="number" step="0.01" name="precio_por_apartamento" class="form-control" value="{{ plan.precio_por_apartamento|stringformat:'s' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">PRECIO ADMIN EXTRA ($)</label>
+                        <input type="number" step="0.01" name="precio_usuario_extra" class="form-control" value="{{ plan.precio_usuario_extra|stringformat:'s' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">DÍAS DE PRUEBA (TRIAL)</label>
+                        <input type="number" name="dias_prueba_default" class="form-control" value="{{ plan.dias_prueba_default }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">PRECIO MÓDULO SEGURIDAD ($)</label>
+                        <input type="number" step="0.01" name="precio_modulo_seguridad" class="form-control" value="{{ plan.precio_modulo_seguridad|stringformat:'s' }}" required>
+                    </div>
+                    <div class="mb-4 form-check form-switch bg-light p-3 rounded">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" name="activo" id="activoPlan{{ plan.id }}" {% if plan.activo %}checked{% endif %}>
+                        <label class="form-check-label fw-bold text-dark" for="activoPlan{{ plan.id }}">Plan Activo (Disponible para Nuevos Clientes)</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 fw-bold shadow-sm">Guardar Cambios</button>
                 </form>
             </div>
         </div>
