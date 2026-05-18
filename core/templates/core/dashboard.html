@@ -97,6 +97,12 @@
                  <button type="button" class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#modalPago">
                     📸 Reportar Pago
                  </button>
+                 
+                 {% if user.residencial.modulo_seguridad_activo %}
+                 <a href="{% url 'mis_visitas' %}" class="btn btn-info text-white shadow-sm fw-bold">
+                    🛡️ Registrar Visita
+                 </a>
+                 {% endif %}
 
                  <a href="{% url 'marketplace_list' %}" class="btn btn-warning shadow-sm fw-bold position-relative">
                     🛒 Marketplace
