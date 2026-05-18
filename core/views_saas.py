@@ -90,13 +90,15 @@ def gestionar_planes(request):
         precio_por_apartamento = request.POST.get('precio_por_apartamento')
         precio_usuario_extra = request.POST.get('precio_usuario_extra')
         dias_prueba = request.POST.get('dias_prueba_default')
+        precio_modulo_seguridad = request.POST.get('precio_modulo_seguridad', 0)
         
         if nombre and precio_por_apartamento:
             PlanSuscripcion.objects.create(
                 nombre=nombre,
                 precio_por_apartamento=precio_por_apartamento,
                 precio_usuario_extra=precio_usuario_extra,
-                dias_prueba_default=dias_prueba
+                dias_prueba_default=dias_prueba,
+                precio_modulo_seguridad=precio_modulo_seguridad
             )
             messages.success(request, f"Plan {nombre} creado correctamente.")
             return redirect('gestionar_planes')

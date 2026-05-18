@@ -17,6 +17,7 @@
                                 <th class="ps-4">Nombre del Plan</th>
                                 <th>Precio x Apto</th>
                                 <th>Precio Admin Extra</th>
+                                <th>Módulo Seguridad</th>
                                 <th>Trial</th>
                                 <th>Estado</th>
                             </tr>
@@ -27,6 +28,7 @@
                                 <td class="ps-4 fw-bold text-dark">{{ plan.nombre }}</td>
                                 <td><span class="badge bg-success">${{ plan.precio_por_apartamento }} / mes</span></td>
                                 <td><span class="badge bg-secondary">${{ plan.precio_usuario_extra }} / mes</span></td>
+                                <td><span class="badge bg-info text-dark">${{ plan.precio_modulo_seguridad }} / mes</span></td>
                                 <td>{{ plan.dias_prueba_default }} días</td>
                                 <td>
                                     {% if plan.activo %}
@@ -73,6 +75,10 @@
                     <div class="mb-4">
                         <label class="form-label fw-bold text-muted small">DÍAS DE PRUEBA (TRIAL)</label>
                         <input type="number" name="dias_prueba_default" class="form-control" value="30" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-muted small">PRECIO MÓDULO SEGURIDAD ($)</label>
+                        <input type="number" step="0.01" name="precio_modulo_seguridad" class="form-control" placeholder="15.00" value="15.00" required>
                     </div>
                     <button type="submit" class="btn btn-primary w-100 fw-bold">Crear Plan</button>
                 </form>
