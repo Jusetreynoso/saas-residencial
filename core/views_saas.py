@@ -226,6 +226,19 @@ def directorio_global_usuarios(request):
         'usuarios': usuarios
     })
 
+@user_passes_test(is_superadmin, login_url='/dashboard/')
+def resetear_clave_superadmin(request, usuario_id):
+    usuario = get_object_or_404(Usuario, id=usuario_id)
+    
+    # Resetear la contraseña
+    nueva_clave = "Alquilo2026*"
+    usuario.set_password(nueva_clave)
+    usuario.save()
+    
+    messages.success(request, f"Contraseña reseteada exitosamente para {usuario.first_name} (@{usuario.username}). La nueva clave es: {nueva_clave}")
+    
+    return redirect('directorio_global_usuarios')
+
 @login_required
 def toggle_modulo_seguridad(request, residencial_id):
     if request.user.rol != 'SUPERADMIN':

@@ -64,11 +64,19 @@
                             <div class="small text-muted">{{ user.telefono|default:"Sin teléfono" }}</div>
                         </td>
                         <td class="text-end pe-4">
-                            {% if user.residencial %}
-                            <a href="{% url 'detalle_cliente' user.residencial.id %}" class="btn btn-sm btn-outline-primary" title="Ver Residencial">
-                                <i class="bi bi-building"></i>
-                            </a>
-                            {% endif %}
+                            <div class="btn-group">
+                                {% if user.residencial %}
+                                <a href="{% url 'detalle_cliente' user.residencial.id %}" class="btn btn-sm btn-outline-primary" title="Ver Residencial">
+                                    <i class="bi bi-building"></i>
+                                </a>
+                                {% endif %}
+                                
+                                {% if user.rol == 'ADMIN_RESIDENCIAL' or user.rol == 'SUPERADMIN' %}
+                                <a href="{% url 'resetear_clave_superadmin' user.id %}" class="btn btn-sm btn-outline-danger" title="Resetear Clave a Alquilo2026*" onclick="return confirm('¿Seguro que deseas resetear la clave de este administrador? La nueva clave será Alquilo2026*')">
+                                    <i class="bi bi-key-fill"></i>
+                                </a>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% empty %}

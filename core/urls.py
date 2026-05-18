@@ -124,4 +124,5 @@ urlpatterns = [
     path('saas/cliente/<int:residencial_id>/seguridad/toggle/', views_saas.toggle_modulo_seguridad, name='toggle_modulo_seguridad'),
     path('saas/facturacion/', views_saas.facturacion_b2b, name='facturacion_b2b'),
     path('saas/usuarios/', views_saas.directorio_global_usuarios, name='directorio_global_usuarios'),
+    path('saas/usuarios/reset-clave/<int:usuario_id>/', views_saas.resetear_clave_superadmin, name='resetear_clave_superadmin'),
 ]
