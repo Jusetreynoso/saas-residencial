@@ -1,0 +1,86 @@
+{% extends 'core/saas/superadmin_base.html' %}
+
+{% block title %}Directorio Global de Usuarios{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-0 text-dark"><i class="bi bi-people-fill text-primary me-2"></i>Directorio Global</h2>
+        <p class="text-muted">Visibilidad completa de todas las cuentas del ecosistema SaaS</p>
+    </div>
+    <a href="{% url 'superadmin_dashboard' %}" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark text-muted small text-uppercase">
+                    <tr>
+                        <th class="ps-4">Usuario</th>
+                        <th>Rol</th>
+                        <th>Residencial</th>
+                        <th>Apto</th>
+                        <th>Contacto</th>
+                        <th class="text-end pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in usuarios %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-bold text-dark">{{ user.first_name }} {{ user.last_name }}</div>
+                            <div class="small text-muted">@{{ user.username }}</div>
+                        </td>
+                        <td>
+                            {% if user.rol == 'SUPERADMIN' %}
+                                <span class="badge bg-dark">Superadmin</span>
+                            {% elif user.rol == 'ADMIN_RESIDENCIAL' %}
+                                <span class="badge bg-primary">Admin</span>
+                            {% elif user.rol == 'SEGURIDAD' %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-shield-lock"></i> Seguridad</span>
+                            {% elif user.rol == 'ASISTENTE' %}
+                                <span class="badge bg-info text-dark">Asistente</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Residente</span>
+                            {% endif %}
+                        </td>
+                        <td class="fw-bold text-muted">
+                            {% if user.residencial %}
+                                {{ user.residencial.nombre }}
+                            {% else %}
+                                <span class="fst-italic">Ninguno</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.apartamento %}
+                                {{ user.apartamento.numero }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="small">{{ user.email }}</div>
+                            <div class="small text-muted">{{ user.telefono|default:"Sin teléfono" }}</div>
+                        </td>
+                        <td class="text-end pe-4">
+                            {% if user.residencial %}
+                            <a href="{% url 'detalle_cliente' user.residencial.id %}" class="btn btn-sm btn-outline-primary" title="Ver Residencial">
+                                <i class="bi bi-building"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            No hay usuarios registrados en el sistema.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

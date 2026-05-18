@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta, datetime
 # IMPORTANTE: Agregamos Usuario a esta lista y quitamos la importación de 'auth.User'
-from .models import Reserva, AreaSocial, BloqueoFecha, LecturaGas, Apartamento, Gasto, Aviso, Usuario, Incidencia, ReportePago, IngresoExtraordinario, Residencial, PlanSuscripcion, ProductoMarketplace, CategoriaMarketplace, Empleado, PagoNomina
+from .models import Reserva, AreaSocial, BloqueoFecha, LecturaGas, Apartamento, Gasto, Aviso, Usuario, Incidencia, ReportePago, IngresoExtraordinario, Residencial, PlanSuscripcion, ProductoMarketplace, CategoriaMarketplace, Empleado, PagoNomina, Visita
 
 # ==========================================
 # 1. FORMULARIO DE RESERVAS
@@ -183,7 +183,7 @@ class RegistroVecinoForm(forms.ModelForm):
 
     class Meta:
         model = Usuario 
-        fields = ['username', 'first_name', 'last_name', 'email', 'password', 'telefono'] 
+        fields = ['username', 'first_name', 'last_name', 'email', 'password', 'telefono', 'rol'] 
         
         widgets = {
             'password': forms.PasswordInput(attrs={'class': 'form-control'}),
@@ -192,12 +192,21 @@ class RegistroVecinoForm(forms.ModelForm):
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 809-555-5555'}),
+            'rol': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, admin_user, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if admin_user.residencial:
             self.fields['apartamento'].queryset = Apartamento.objects.filter(residencial=admin_user.residencial)
+            
+        # Ocultar roles de súper administrador al administrador residencial
+        ROLES_PERMITIDOS = [
+            ('RESIDENTE', 'Residente'),
+            ('ASISTENTE', 'Asistente Administrativo'),
+            ('SEGURIDAD', 'Personal de Seguridad / Recepción'),
+        ]
+        self.fields['rol'].choices = ROLES_PERMITIDOS
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -220,19 +229,27 @@ class IncidenciaForm(forms.ModelForm):
 class EditarVecinoForm(forms.ModelForm):
     class Meta:
         model = Usuario
-        fields = ['first_name', 'last_name', 'email', 'telefono', 'apartamento']
+        fields = ['first_name', 'last_name', 'email', 'telefono', 'apartamento', 'rol']
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control'}),
             'apartamento': forms.Select(attrs={'class': 'form-select'}),
+            'rol': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, admin_user, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if admin_user and admin_user.residencial:
             self.fields['apartamento'].queryset = Apartamento.objects.filter(residencial=admin_user.residencial)
+
+        ROLES_PERMITIDOS = [
+            ('RESIDENTE', 'Residente'),
+            ('ASISTENTE', 'Asistente Administrativo'),
+            ('SEGURIDAD', 'Personal de Seguridad / Recepción'),
+        ]
+        self.fields['rol'].choices = ROLES_PERMITIDOS
 
 
 class AbonoForm(forms.Form):
@@ -363,4 +380,25 @@ class PagoNominaForm(forms.ModelForm):
             'periodo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Mayo 2026'}),
             'monto_extra': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'concepto_extra': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Bono por limpieza'}),
+        }
+
+# ---------------------------------------------------------
+# MÓDULO DE SEGURIDAD Y VISITAS
+# ---------------------------------------------------------
+
+class VisitaForm(forms.ModelForm):
+    class Meta:
+        model = Visita
+        fields = ['nombre_visitante', 'cedula_visitante', 'placa_vehiculo', 'fecha_esperada']
+        widgets = {
+            'nombre_visitante': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Juan Pérez'}),
+            'cedula_visitante': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opcional'}),
+            'placa_vehiculo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opcional'}),
+            'fecha_esperada': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        }
+        labels = {
+            'nombre_visitante': 'Nombre Completo del Visitante',
+            'cedula_visitante': 'Cédula / Pasaporte',
+            'placa_vehiculo': 'Placa del Vehículo (Si aplica)',
+            'fecha_esperada': 'Fecha Esperada',
         }

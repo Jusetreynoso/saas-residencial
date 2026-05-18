@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mis Visitas - Alquilo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            background-color: #f8f9fa; 
+            font-family: 'Inter', sans-serif;
+        }
+        .card { 
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(10px); 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px; 
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left me-2"></i> Volver al Dashboard</a>
+    </div>
+</nav>
+
+<div class="container pb-5">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-dark mb-0"><i class="bi bi-person-bounding-box text-primary me-2"></i>Mis Visitas</h2>
+        <p class="text-muted">Registra a las personas que esperas para agilizar su entrada.</p>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaVisita">
+        <i class="bi bi-plus-lg"></i> Pre-registrar Visita
+    </button>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-muted small text-uppercase">
+                    <tr>
+                        <th class="ps-4">Visitante</th>
+                        <th>Cédula</th>
+                        <th>Vehículo</th>
+                        <th>Fecha Esperada</th>
+                        <th>Estado</th>
+                        <th class="text-end pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for visita in visitas %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-bold">{{ visita.nombre_visitante }}</div>
+                            {% if visita.reserva_asociada %}
+                            <div class="small text-muted"><i class="bi bi-star-fill text-warning"></i> Evento Especial</div>
+                            {% endif %}
+                        </td>
+                        <td>{{ visita.cedula_visitante|default:"N/A" }}</td>
+                        <td>
+                            {% if visita.placa_vehiculo %}
+                                <span class="badge bg-light text-dark border"><i class="bi bi-car-front"></i> {{ visita.placa_vehiculo }}</span>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="fw-bold text-muted">{{ visita.fecha_esperada|date:"d M Y" }}</td>
+                        <td>
+                            {% if visita.estado == 'ESPERADA' %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Esperada</span>
+                            {% elif visita.estado == 'EN_CURSO' %}
+                                <span class="badge bg-success"><i class="bi bi-door-open"></i> En Curso</span>
+                            {% elif visita.estado == 'FINALIZADA' %}
+                                <span class="badge bg-secondary"><i class="bi bi-check2-all"></i> Finalizada</span>
+                            {% else %}
+                                <span class="badge bg-danger"><i class="bi bi-x"></i> Cancelada</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            {% if visita.estado == 'ESPERADA' %}
+                                <a href="{% url 'cancelar_visita' visita.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Seguro que deseas cancelar esta visita?');">
+                                    <i class="bi bi-trash"></i> Cancelar
+                                </a>
+                            {% else %}
+                                <span class="text-muted small">
+                                    {% if visita.hora_entrada %}Entrada: {{ visita.hora_entrada|time:"H:i" }}{% endif %}
+                                    {% if visita.hora_salida %}<br>Salida: {{ visita.hora_salida|time:"H:i" }}{% endif %}
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-calendar-x fs-1 text-light mb-3 d-block"></i>
+                            No tienes visitas registradas.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nueva Visita -->
+<div class="modal fade" id="modalNuevaVisita" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-plus me-2"></i>Nueva Visita</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ form.nombre_visitante.label }}</label>
+                        {{ form.nombre_visitante }}
+                        <div class="text-danger small mt-1">{{ form.nombre_visitante.errors }}</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">{{ form.cedula_visitante.label }}</label>
+                            {{ form.cedula_visitante }}
+                            <div class="text-danger small mt-1">{{ form.cedula_visitante.errors }}</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">{{ form.placa_vehiculo.label }}</label>
+                            {{ form.placa_vehiculo }}
+                            <div class="text-danger small mt-1">{{ form.placa_vehiculo.errors }}</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ form.fecha_esperada.label }}</label>
+                        {{ form.fecha_esperada }}
+                        <div class="text-danger small mt-1">{{ form.fecha_esperada.errors }}</div>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary py-2 fw-bold">Registrar Visita</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -61,6 +61,35 @@
                         <i class="bi bi-x-circle"></i> Cancelar Cuenta
                     </a>
                 </div>
+
+                <hr class="my-4">
+                <h6 class="fw-bold text-muted text-uppercase mb-3">Módulos Adicionales</h6>
+                <div class="card bg-light border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold"><i class="bi bi-shield-check text-primary me-2"></i>Seguridad y Visitas</span>
+                            {% if residencial.modulo_seguridad_activo %}
+                                <span class="badge bg-success">Activo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </div>
+                        <p class="small text-muted mb-3">Habilita el dashboard de Garita Virtual para guardias y listas de invitados.</p>
+                        
+                        <div class="d-grid">
+                            {% if residencial.modulo_seguridad_activo %}
+                                <a href="{% url 'toggle_modulo_seguridad' residencial.id %}" class="btn btn-outline-danger btn-sm" onclick="return confirm('¿Desactivar módulo de seguridad? Dejará de cobrarse en la próxima factura.')">
+                                    Desactivar Módulo
+                                </a>
+                            {% else %}
+                                <a href="{% url 'toggle_modulo_seguridad' residencial.id %}" class="btn btn-primary btn-sm" onclick="return confirm('¿Activar módulo de seguridad? Se sumará ${{ suscripcion.plan.precio_modulo_seguridad }} a la mensualidad.')">
+                                    Activar Módulo (+${{ suscripcion.plan.precio_modulo_seguridad }})
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>

@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from . import views
 from . import views_saas
+from . import views_visitas
 
 
 urlpatterns = [
@@ -96,6 +97,16 @@ urlpatterns = [
     path('marketplace/borrar/<int:producto_id>/', views.producto_borrar, name='producto_borrar'),
     path('marketplace/republicar/<int:producto_id>/', views.producto_republicar, name='producto_republicar'),
 
+    # --- RUTAS DE VISITAS (RESIDENTE) ---
+    path('visitas/', views_visitas.mis_visitas, name='mis_visitas'),
+    path('visitas/cancelar/<int:visita_id>/', views_visitas.cancelar_visita, name='cancelar_visita'),
+    path('visitas/evento/<int:reserva_id>/', views_visitas.gestionar_invitados_reserva, name='gestionar_invitados_reserva'),
+
+    # --- RUTAS DE SEGURIDAD (GARITA) ---
+    path('seguridad/dashboard/', views_visitas.dashboard_seguridad, name='dashboard_seguridad'),
+    path('seguridad/entrada/<int:visita_id>/', views_visitas.marcar_entrada_visita, name='marcar_entrada_visita'),
+    path('seguridad/salida/<int:visita_id>/', views_visitas.marcar_salida_visita, name='marcar_salida_visita'),
+
     # --- MÓDULO DE RECURSOS HUMANOS Y NÓMINA ---
     path('rrhh/directorio/', views.directorio_personal, name='directorio_personal'),
     path('rrhh/pagar/<int:empleado_id>/', views.procesar_pago_empleado, name='procesar_pago_empleado'),
@@ -109,5 +120,7 @@ urlpatterns = [
     path('saas/cliente/nuevo/', views_saas.crear_cliente_saas, name='crear_cliente_saas'),
     path('saas/cliente/<int:residencial_id>/', views_saas.detalle_cliente, name='detalle_cliente'),
     path('saas/cliente/<int:residencial_id>/estado/<str:nuevo_estado>/', views_saas.cambiar_estado_suscripcion, name='cambiar_estado_suscripcion'),
+    path('saas/cliente/<int:residencial_id>/seguridad/toggle/', views_saas.toggle_modulo_seguridad, name='toggle_modulo_seguridad'),
     path('saas/facturacion/', views_saas.facturacion_b2b, name='facturacion_b2b'),
+    path('saas/usuarios/', views_saas.directorio_global_usuarios, name='directorio_global_usuarios'),
 ]

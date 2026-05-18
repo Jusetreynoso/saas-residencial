@@ -36,6 +36,9 @@ class Residencial(models.Model):
         help_text="Si se activa, los usuarios con cuotas vencidas no podrán crear reservas."
     )
 
+    # --- MÓDULO DE SEGURIDAD ---
+    modulo_seguridad_activo = models.BooleanField(default=False, help_text="Activa el control de visitas y garita virtual")
+
     def __str__(self):
         return self.nombre
 
@@ -63,6 +66,7 @@ class Usuario(AbstractUser):
         ('SUPERADMIN', 'Super Administrador (Todo el sistema)'),
         ('ADMIN_RESIDENCIAL', 'Administrador de Residencial'),
         ('ASISTENTE', 'Asistente Administrativo'),
+        ('SEGURIDAD', 'Personal de Seguridad / Recepción'),
         ('RESIDENTE', 'Residente'),
     )
     
@@ -478,6 +482,7 @@ class PlanSuscripcion(models.Model):
     nombre = models.CharField(max_length=50, help_text="Ej: Plan Básico, Plan Premium")
     precio_por_apartamento = models.DecimalField(max_digits=8, decimal_places=2, default=1.00)
     precio_usuario_extra = models.DecimalField(max_digits=8, decimal_places=2, default=5.00)
+    precio_modulo_seguridad = models.DecimalField(max_digits=8, decimal_places=2, default=15.00, help_text="Precio extra por el módulo de seguridad")
     dias_prueba_default = models.IntegerField(default=30)
     activo = models.BooleanField(default=True)
 
@@ -531,9 +536,14 @@ class SuscripcionResidencial(models.Model):
         cobro_servicios = self.servicios_adicionales.aggregate(
             total=Coalesce(Sum('precio_mensual'), Decimal('0.00'))
         )['total']
+        
+        # 4. Cobro de Módulos Opcionales
+        cobro_modulos = Decimal('0.00')
+        if self.residencial.modulo_seguridad_activo:
+            cobro_modulos += self.plan.precio_modulo_seguridad
 
         # Total a facturar este mes
-        return cobro_base + cobro_usuarios + cobro_servicios
+        return cobro_base + cobro_usuarios + cobro_servicios + cobro_modulos
 
     def __str__(self):
         return f"Suscripción de {self.residencial.nombre} - {self.get_estado_display()}"
@@ -558,3 +568,36 @@ class FacturaSaaS(models.Model):
     def __str__(self):
         return f"{self.residencial.nombre} - {self.concepto} - ${self.monto}"
 
+# ---------------------------------------------------------
+# MÓDULO DE SEGURIDAD Y VISITAS
+# ---------------------------------------------------------
+
+class Visita(models.Model):
+    ESTADOS = (
+        ('ESPERADA', 'Esperada'),
+        ('EN_CURSO', 'En Curso (Dentro)'),
+        ('FINALIZADA', 'Finalizada (Salió)'),
+        ('CANCELADA', 'Cancelada')
+    )
+
+    residencial = models.ForeignKey(Residencial, on_delete=models.CASCADE, related_name='visitas')
+    apartamento = models.ForeignKey(Apartamento, on_delete=models.CASCADE, related_name='visitas_esperadas')
+    residente = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='mis_visitas_registradas')
+    
+    nombre_visitante = models.CharField(max_length=150)
+    cedula_visitante = models.CharField(max_length=50, blank=True, null=True)
+    placa_vehiculo = models.CharField(max_length=20, blank=True, null=True)
+    
+    fecha_esperada = models.DateField()
+    
+    hora_entrada = models.DateTimeField(null=True, blank=True)
+    hora_salida = models.DateTimeField(null=True, blank=True)
+    
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='ESPERADA')
+    
+    reserva_asociada = models.ForeignKey(Reserva, on_delete=models.CASCADE, null=True, blank=True, related_name='invitados')
+    
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.nombre_visitante} -> {self.apartamento.numero} ({self.get_estado_display()})"

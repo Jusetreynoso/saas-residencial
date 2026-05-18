@@ -460,12 +460,19 @@
                                 </div>
 
                                 {% if reserva.estado != 'RECHAZADA' %}
-                                    <a href="{% url 'cancelar_reserva' reserva.id %}" 
-                                       class="btn btn-outline-danger btn-sm" 
-                                       onclick="return confirm('¿Cancelar reserva?')"
-                                       title="Cancelar">
-                                        🗑️
-                                    </a>
+                                    <div class="btn-group">
+                                        {% if reserva.estado == 'APROBADA' and user.residencial.modulo_seguridad_activo %}
+                                            <a href="{% url 'gestionar_invitados_reserva' reserva.id %}" class="btn btn-outline-primary btn-sm" title="Lista de Invitados">
+                                                👥 Invitados
+                                            </a>
+                                        {% endif %}
+                                        <a href="{% url 'cancelar_reserva' reserva.id %}" 
+                                           class="btn btn-outline-danger btn-sm" 
+                                           onclick="return confirm('¿Cancelar reserva?')"
+                                           title="Cancelar">
+                                            🗑️
+                                        </a>
+                                    </div>
                                 {% endif %}
                             </li>
                         {% empty %}

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Garita Virtual - Seguridad</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #f0f2f5; font-family: 'Inter', sans-serif; }
+        .card { border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .navbar { background: linear-gradient(135deg, #1e293b, #0f172a); }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark mb-4 shadow">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand fw-bold" href="#"><i class="bi bi-shield-check text-warning me-2"></i>Garita Virtual | {{ user.residencial.nombre }}</a>
+        <div class="d-flex align-items-center">
+            <span class="text-white me-3"><i class="bi bi-person-badge"></i> {{ user.first_name }} (Seguridad)</span>
+            <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-light btn-sm fw-bold">Salir</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid px-4 pb-5">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- Columna Izquierda: Visitas del Día -->
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-list-check text-primary me-2"></i>Visitas Esperadas ({{ hoy|date:"d M Y" }})</h5>
+                    <span class="badge bg-primary rounded-pill fs-6">{{ visitas_hoy.count }}</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-muted small">
+                                <tr>
+                                    <th class="ps-4">Apto</th>
+                                    <th>Visitante</th>
+                                    <th>Identificación / Vehículo</th>
+                                    <th>Estado</th>
+                                    <th class="text-end pe-4">Acción Rápida</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for visita in visitas_hoy %}
+                                <tr>
+                                    <td class="ps-4 fw-bold fs-5 text-primary">{{ visita.apartamento.numero }}</td>
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ visita.nombre_visitante }}</div>
+                                        <div class="small text-muted">Autoriza: {{ visita.residente.first_name }}</div>
+                                    </td>
+                                    <td>
+                                        {% if visita.cedula_visitante %}<div><i class="bi bi-person-vcard"></i> {{ visita.cedula_visitante }}</div>{% endif %}
+                                        {% if visita.placa_vehiculo %}<div><i class="bi bi-car-front"></i> {{ visita.placa_vehiculo }}</div>{% endif %}
+                                        {% if not visita.cedula_visitante and not visita.placa_vehiculo %}
+                                            <span class="text-muted small">No especificado</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if visita.estado == 'ESPERADA' %}
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Esperando</span>
+                                        {% elif visita.estado == 'EN_CURSO' %}
+                                            <span class="badge bg-success"><i class="bi bi-door-open"></i> Adentro</span><br>
+                                            <small class="text-muted">{{ visita.hora_entrada|time:"H:i" }}</small>
+                                        {% elif visita.estado == 'FINALIZADA' %}
+                                            <span class="badge bg-secondary"><i class="bi bi-check2-all"></i> Salió</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        {% if visita.estado == 'ESPERADA' %}
+                                            <a href="{% url 'marcar_entrada_visita' visita.id %}" class="btn btn-success fw-bold px-3 shadow-sm" onclick="return confirm('¿Registrar entrada de {{ visita.nombre_visitante }}?');">
+                                                Dar Entrada
+                                            </a>
+                                        {% elif visita.estado == 'EN_CURSO' %}
+                                            <a href="{% url 'marcar_salida_visita' visita.id %}" class="btn btn-secondary fw-bold px-3 shadow-sm" onclick="return confirm('¿Registrar salida de {{ visita.nombre_visitante }}?');">
+                                                Dar Salida
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-5 text-muted">
+                                        <i class="bi bi-cup-hot fs-1 d-block mb-2"></i>
+                                        No hay visitas programadas para hoy.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Actividades y Áreas Sociales -->
+        <div class="col-lg-4">
+            <div class="card border-warning border-2 border-top-0 border-end-0 border-bottom-0 h-100">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-calendar-event text-warning me-2"></i>Eventos de Hoy</h5>
+                </div>
+                <div class="card-body">
+                    {% for reserva in reservas_hoy %}
+                    <div class="border rounded p-3 mb-3 bg-light">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge bg-primary fs-6">{{ reserva.area_social.nombre }}</span>
+                            <span class="fw-bold text-dark">{{ reserva.hora_inicio|time:"H:i" }} - {{ reserva.hora_fin|time:"H:i" }}</span>
+                        </div>
+                        <h6 class="fw-bold mb-1">Apto {{ reserva.usuario.apartamento.numero }} ({{ reserva.usuario.first_name }})</h6>
+                        
+                        <hr class="my-2">
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="small fw-bold text-muted">Invitados Pre-registrados:</span>
+                            <span class="badge bg-secondary">{{ reserva.invitados.count }}</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-calendar-x fs-1 d-block mb-2 text-light"></i>
+                        No hay eventos programadas en las áreas sociales para hoy.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

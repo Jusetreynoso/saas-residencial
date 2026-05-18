@@ -197,5 +197,27 @@ def reporte_inteligencia(request):
     }
     return render(request, 'core/saas/reporte_inteligencia.html', context)
 
+@login_required
+def directorio_global_usuarios(request):
+    if request.user.rol != 'SUPERADMIN':
+        return redirect('dashboard')
+        
+    usuarios = Usuario.objects.all().select_related('residencial', 'apartamento').order_by('residencial__nombre', 'rol')
+    
+    return render(request, 'core/saas/directorio_global.html', {
+        'usuarios': usuarios
+    })
 
+@login_required
+def toggle_modulo_seguridad(request, residencial_id):
+    if request.user.rol != 'SUPERADMIN':
+        return redirect('dashboard')
+        
+    residencial = get_object_or_404(Residencial, pk=residencial_id)
+    residencial.modulo_seguridad_activo = not residencial.modulo_seguridad_activo
+    residencial.save()
+    
+    estado = "Activado" if residencial.modulo_seguridad_activo else "Desactivado"
+    messages.success(request, f"Módulo de Seguridad {estado} para {residencial.nombre}.")
+    return redirect('detalle_cliente', residencial_id=residencial.id)
 

@@ -51,6 +51,10 @@ def dashboard(request):
     # 1. LÓGICA PARA SUPER ADMIN
     if user.is_superuser or user.rol == 'SUPERADMIN':
         return redirect('superadmin_dashboard')
+        
+    # 1.5 LÓGICA PARA SEGURIDAD
+    if user.rol == 'SEGURIDAD':
+        return redirect('dashboard_seguridad')
     
     # 2. LÓGICA PARA USUARIOS DEL RESIDENCIAL
     elif user.residencial:
@@ -901,7 +905,7 @@ def crear_vecino(request):
             # 1. Crear el usuario base
             nuevo_usuario = form.save(commit=False)
             nuevo_usuario.residencial = request.user.residencial 
-            nuevo_usuario.rol = 'RESIDENTE' 
+            nuevo_usuario.rol = form.cleaned_data.get('rol', 'RESIDENTE')
             
             # Guardamos teléfono manualmente
             nuevo_usuario.telefono = form.cleaned_data.get('telefono')

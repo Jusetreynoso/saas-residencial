@@ -66,6 +66,11 @@
                         <i class="bi bi-pie-chart-fill"></i> Analítica Global
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'directorio_global_usuarios' %}active{% endif %}" href="{% url 'directorio_global_usuarios' %}">
+                        <i class="bi bi-people-fill"></i> Directorio Usuarios
+                    </a>
+                </li>
             </ul>
             <div class="d-flex align-items-center">
                 <a href="/admin/" class="btn btn-outline-secondary btn-sm me-3" target="_blank" title="Django Admin Tradicional">
