@@ -132,12 +132,14 @@ def detalle_cliente(request, residencial_id):
     sub = residencial.suscripcion
     mensualidad = sub.calcular_mensualidad()
     facturas = residencial.facturas_saas.order_by('-fecha_emision')
+    planes_disponibles = PlanSuscripcion.objects.filter(activo=True)
     
     context = {
         'residencial': residencial,
         'suscripcion': sub,
         'mensualidad_estimada': mensualidad,
-        'facturas': facturas
+        'facturas': facturas,
+        'planes_disponibles': planes_disponibles
     }
     return render(request, 'core/saas/cliente_detalle.html', context)
 
@@ -151,6 +153,21 @@ def cambiar_estado_suscripcion(request, residencial_id, nuevo_estado):
             sub.save()
             messages.success(request, f"Estado de {residencial.nombre} cambiado a {nuevo_estado}")
     return redirect('detalle_cliente', residencial_id=residencial.id)
+
+@user_passes_test(is_superadmin, login_url='/dashboard/')
+def cambiar_plan_suscripcion(request, residencial_id):
+    if request.method == 'POST':
+        residencial = get_object_or_404(Residencial, id=residencial_id)
+        nuevo_plan_id = request.POST.get('nuevo_plan_id')
+        nuevo_plan = get_object_or_404(PlanSuscripcion, id=nuevo_plan_id)
+        
+        if hasattr(residencial, 'suscripcion'):
+            sub = residencial.suscripcion
+            sub.plan = nuevo_plan
+            sub.save()
+            messages.success(request, f"El plan de {residencial.nombre} fue actualizado a {nuevo_plan.nombre}.")
+            
+    return redirect('detalle_cliente', residencial_id=residencial_id)
 
 @user_passes_test(is_superadmin, login_url='/dashboard/')
 def facturacion_b2b(request):

@@ -45,8 +45,8 @@
 
                 <h6 class="fw-bold text-muted text-uppercase mb-3">Acciones de Estado</h6>
                 <div class="d-grid gap-2">
-                    {% if suscripcion.estado == 'PRUEBA' or suscripcion.estado == 'SUSPENDIDA' %}
-                    <a href="{% url 'cambiar_estado_suscripcion' residencial.id 'ACTIVA' %}" class="btn btn-success fw-bold" onclick="return confirm('¿Pasar cliente a estado ACTIVO?')">
+                    {% if suscripcion.estado != 'ACTIVA' %}
+                    <a href="{% url 'cambiar_estado_suscripcion' residencial.id 'ACTIVA' %}" class="btn btn-success fw-bold" onclick="return confirm('¿Activar / Reactivar la cuenta de este cliente?')">
                         <i class="bi bi-check-circle"></i> Marcar como ACTIVA
                     </a>
                     {% endif %}
@@ -57,10 +57,18 @@
                     </a>
                     {% endif %}
                     
-                    <a href="{% url 'cambiar_estado_suscripcion' residencial.id 'CANCELADA' %}" class="btn btn-outline-danger fw-bold mt-2" onclick="return confirm('¿Cancelar suscripción definitivamente?')">
+                    {% if suscripcion.estado != 'CANCELADA' %}
+                    <a href="{% url 'cambiar_estado_suscripcion' residencial.id 'CANCELADA' %}" class="btn btn-outline-danger fw-bold mt-2" onclick="return confirm('¿Cancelar suscripción definitivamente? (Perderá acceso al SaaS)')">
                         <i class="bi bi-x-circle"></i> Cancelar Cuenta
                     </a>
+                    {% endif %}
                 </div>
+
+                <hr class="my-4">
+                <h6 class="fw-bold text-muted text-uppercase mb-3">Gestión de Plan</h6>
+                <button class="btn btn-outline-primary w-100 fw-bold" data-bs-toggle="modal" data-bs-target="#cambiarPlanModal">
+                    <i class="bi bi-arrow-left-right"></i> Cambiar Plan de Suscripción
+                </button>
 
                 <hr class="my-4">
                 <h6 class="fw-bold text-muted text-uppercase mb-3">Módulos Adicionales</h6>
@@ -140,6 +148,36 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cambiar Plan -->
+<div class="modal fade" id="cambiarPlanModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-arrow-left-right me-2"></i>Cambiar Plan de Suscripción</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-4">Selecciona el nuevo plan de suscripción para <strong>{{ residencial.nombre }}</strong>. Los nuevos montos se aplicarán a partir de la próxima factura.</p>
+                <form action="{% url 'cambiar_plan_suscripcion' residencial.id %}" method="post">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-muted">PLAN DISPONIBLE</label>
+                        <select name="nuevo_plan_id" class="form-select" required>
+                            <option value="">Selecciona un plan...</option>
+                            {% for plan in planes_disponibles %}
+                                <option value="{{ plan.id }}" {% if plan.id == suscripcion.plan.id %}selected{% endif %}>
+                                    {{ plan.nombre }} (${{ plan.precio_por_apartamento }}/apto)
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 fw-bold">Actualizar Plan</button>
+                </form>
             </div>
         </div>
     </div>

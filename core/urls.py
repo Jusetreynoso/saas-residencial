@@ -121,6 +121,7 @@ urlpatterns = [
     path('saas/cliente/nuevo/', views_saas.crear_cliente_saas, name='crear_cliente_saas'),
     path('saas/cliente/<int:residencial_id>/', views_saas.detalle_cliente, name='detalle_cliente'),
     path('saas/cliente/<int:residencial_id>/estado/<str:nuevo_estado>/', views_saas.cambiar_estado_suscripcion, name='cambiar_estado_suscripcion'),
+    path('saas/cliente/<int:residencial_id>/plan/', views_saas.cambiar_plan_suscripcion, name='cambiar_plan_suscripcion'),
     path('saas/cliente/<int:residencial_id>/seguridad/toggle/', views_saas.toggle_modulo_seguridad, name='toggle_modulo_seguridad'),
     path('saas/facturacion/', views_saas.facturacion_b2b, name='facturacion_b2b'),
     path('saas/usuarios/', views_saas.directorio_global_usuarios, name='directorio_global_usuarios'),
