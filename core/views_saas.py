@@ -106,6 +106,22 @@ def gestionar_planes(request):
     return render(request, 'core/saas/planes.html', {'planes': planes})
 
 @user_passes_test(is_superadmin, login_url='/dashboard/')
+def editar_plan(request, plan_id):
+    plan = get_object_or_404(PlanSuscripcion, id=plan_id)
+    if request.method == 'POST':
+        plan.nombre = request.POST.get('nombre', plan.nombre)
+        plan.precio_por_apartamento = request.POST.get('precio_por_apartamento', plan.precio_por_apartamento)
+        plan.precio_usuario_extra = request.POST.get('precio_usuario_extra', plan.precio_usuario_extra)
+        plan.dias_prueba_default = request.POST.get('dias_prueba_default', plan.dias_prueba_default)
+        plan.precio_modulo_seguridad = request.POST.get('precio_modulo_seguridad', plan.precio_modulo_seguridad)
+        plan.activo = request.POST.get('activo') == 'on'
+        plan.save()
+        messages.success(request, f"Plan {plan.nombre} actualizado correctamente.")
+        return redirect('gestionar_planes')
+        
+    return redirect('gestionar_planes')
+
+@user_passes_test(is_superadmin, login_url='/dashboard/')
 def detalle_cliente(request, residencial_id):
     residencial = get_object_or_404(Residencial, id=residencial_id)
     
