@@ -3,193 +3,444 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión Residencial Inteligente</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <title>SaaS Residencial - Gestión Inteligente</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .hero-section {
-            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-            color: white;
-            padding: 100px 0 80px;
+        :root {
+            --bg-dark: #0f172a;
+            --bg-darker: #020617;
+            --accent-mint: #10b981;
+            --accent-blue: #3b82f6;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
         }
-        .feature-icon {
-            font-size: 2.5rem;
-            color: #0d6efd;
-            margin-bottom: 1rem;
-        }
-        .btn-cta {
-            padding: 12px 30px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            border-radius: 50px;
-        }
-        .mockup-container {
-            background: white;
-            padding: 10px;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-            transform: translateY(40px);
-        }
-    </style>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { 
-            background-color: #f8f9fa; 
+        body {
             font-family: 'Inter', sans-serif;
+            background-color: var(--bg-darker);
+            color: #f8fafc;
+            overflow-x: hidden;
+            position: relative;
         }
-        
-        .card, .card-menu { 
-            background: rgba(255, 255, 255, 0.85); 
-            backdrop-filter: blur(10px); 
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05); 
-            border-radius: 12px; 
+
+        /* Ambient Background Glows */
+        .ambient-glow {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: -1;
+            opacity: 0.4;
+        }
+        .glow-1 {
+            top: -10%;
+            left: -10%;
+            width: 500px;
+            height: 500px;
+            background: var(--accent-blue);
+        }
+        .glow-2 {
+            top: 40%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: var(--accent-mint);
+        }
+        .glow-3 {
+            bottom: -10%;
+            left: 20%;
+            width: 600px;
+            height: 600px;
+            background: #4f46e5;
+            opacity: 0.2;
+        }
+
+        /* Glassmorphism Classes */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255,255,255,0.25);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Buttons */
+        .btn-mint {
+            background-color: var(--accent-mint);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 14px 32px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+        }
+        .btn-mint:hover {
+            background-color: #059669;
+            transform: translateY(-2px);
+            color: white;
+            box-shadow: 0 6px 25px rgba(16, 185, 129, 0.5);
+        }
+
+        .btn-outline-light-glass {
+            background: rgba(255,255,255,0.05);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 50px;
+            padding: 14px 32px;
+            font-weight: 600;
+            backdrop-filter: blur(5px);
             transition: all 0.3s ease;
         }
-        
-        .card-menu:hover, .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08); 
+        .btn-outline-light-glass:hover {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border-color: rgba(255,255,255,0.5);
+            transform: translateY(-2px);
         }
 
-        .btn { transition: all 0.3s ease; border-radius: 8px; }
+        /* Sections */
+        .hero-section {
+            padding: 140px 0 100px;
+            text-align: center;
+        }
+        
+        .hero-title {
+            font-size: 3.8rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 3.5rem;
+            text-align: center;
+            background: linear-gradient(to right, #f8fafc, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--accent-mint), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Workflow Steps */
+        .step-number {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-mint));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+            color: white;
+            border: 4px solid var(--bg-darker);
+        }
+        .step-connector {
+            position: relative;
+        }
+        @media (min-width: 992px) {
+            .step-connector::after {
+                content: '';
+                position: absolute;
+                top: 35px;
+                right: -50%;
+                width: 100%;
+                height: 3px;
+                background: linear-gradient(to right, var(--accent-blue), rgba(255,255,255,0.1));
+                z-index: -1;
+            }
+            .col-lg-4:last-child .step-connector::after {
+                display: none;
+            }
+        }
+
+        /* Pricing */
+        .pricing-card {
+            padding: 40px 30px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+        .pricing-popular {
+            border-color: rgba(16, 185, 129, 0.5);
+            background: rgba(16, 185, 129, 0.05);
+            transform: scale(1.03);
+        }
+        .pricing-popular:hover {
+            transform: scale(1.05);
+            border-color: rgba(16, 185, 129, 0.8);
+        }
+        .popular-badge {
+            position: absolute;
+            top: 20px;
+            right: -35px;
+            background: var(--accent-mint);
+            color: var(--bg-darker);
+            padding: 5px 40px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            transform: rotate(45deg);
+            letter-spacing: 1px;
+        }
+        .price {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin: 1.5rem 0;
+            color: white;
+        }
+        .pricing-features {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 2rem;
+            flex-grow: 1;
+        }
+        .pricing-features li {
+            margin-bottom: 1.2rem;
+            opacity: 0.9;
+            display: flex;
+            align-items: center;
+        }
+        .pricing-features i {
+            color: var(--accent-mint);
+            margin-right: 12px;
+            font-size: 1.1rem;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-darker); 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--glass-border); 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.3); 
+        }
     </style>
 </head>
-
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-light bg-white py-3 shadow-sm fixed-top">
+    <!-- Ambient Background Glows -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark pt-4">
         <div class="container">
-            <a class="navbar-brand fw-bold text-primary" href="#">
-                <i class="bi bi-building"></i> SmartResidencial
+            <a class="navbar-brand fw-bold fs-4 d-flex align-items-center" href="#">
+                <i class="fa-solid fa-building me-2" style="color: var(--accent-mint)"></i> 
+                SaaS<span style="color: var(--accent-mint); font-weight: 300;">Residencial</span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-center">
-                    <li class="nav-item"><a class="nav-link" href="#beneficios">Beneficios</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#modulos">Módulos</a></li>
-                    <li class="nav-item ms-lg-3">
-                        <a href="{% url 'login' %}" class="btn btn-outline-primary fw-bold px-4 rounded-pill">Iniciar Sesión</a>
-                    </li>
-                </ul>
-            </div>
         </div>
     </nav>
 
-    <section class="hero-section text-center mt-5">
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-lg-8">
-                    <span class="badge bg-light text-primary mb-3 px-3 py-2 rounded-pill shadow-sm">El software #1 para Condominios</span>
-                    <h1 class="display-4 fw-bold mb-4">Gestión Residencial Transparente y Sin Estrés</h1>
-                    <p class="lead mb-5 opacity-75">
-                        Olvídate de los Excels y los conflictos. Automatiza cobros, transparenta los gastos, reduce la morosidad y gestiona las áreas sociales desde una sola plataforma fácil de usar.
+    <!-- 1. Hero Section -->
+    <section class="hero-section container">
+        <div class="row justify-content-center">
+            <div class="col-lg-9">
+                <h1 class="hero-title">La plataforma definitiva para la gestión inteligente de condominios</h1>
+                <p class="lead mb-5 text-light opacity-75 fs-4 fw-light">
+                    Ahorra decenas de horas al mes automatizando cobros y garantiza una transparencia financiera total para tu comunidad.
+                </p>
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a href="#" class="btn btn-mint"><i class="fa-solid fa-rocket me-2"></i> Comenzar Prueba de 30 Días</a>
+                    <a href="#" class="btn btn-outline-light-glass"><i class="fa-solid fa-envelope me-2"></i> Contactar Ventas</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. Features Section -->
+    <section class="py-5 container mt-4">
+        <h2 class="section-title">Nuestros Superpoderes</h2>
+        <div class="row g-4">
+            
+            <!-- Feature 1 -->
+            <div class="col-md-6 col-lg-4">
+                <div class="glass-card p-5 h-100 text-center">
+                    <i class="fa-solid fa-robot feature-icon"></i>
+                    <h4 class="fw-bold mb-3">Facturación 100% Autónoma</h4>
+                    <p class="text-light opacity-75 mb-0 fw-light">
+                        Nuestro Robot Cobrador genera las cuotas mensuales y aplica recargos por mora automáticamente. Cero trabajo manual.
                     </p>
-                    <div class="d-flex justify-content-center gap-3 flex-wrap">
-                        <a href="https://wa.me/18493532097?text=Hola,%20me%20interesa%20un%20demo%20del%20sistema%20residencial" target="_blank" class="btn btn-light text-primary btn-cta shadow">
-                            Solicitar un Demo Gratis
-                        </a>
-                        <a href="#beneficios" class="btn btn-outline-light btn-cta">Descubre Cómo</a>
-                    </div>
                 </div>
+            </div>
+            
+            <!-- Feature 2 -->
+            <div class="col-md-6 col-lg-4">
+                <div class="glass-card p-5 h-100 text-center">
+                    <i class="fa-solid fa-chart-pie feature-icon"></i>
+                    <h4 class="fw-bold mb-3">Transparencia Financiera Total</h4>
+                    <p class="text-light opacity-75 mb-0 fw-light">
+                        Gráficos dinámicos y un catálogo de más de 15 categorías de gastos para que la junta sepa exactamente a dónde va cada centavo.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Feature 3 -->
+            <div class="col-md-6 col-lg-4">
+                <div class="glass-card p-5 h-100 text-center">
+                    <i class="fa-solid fa-users-gear feature-icon"></i>
+                    <h4 class="fw-bold mb-3">Módulo de Recursos Humanos</h4>
+                    <p class="text-light opacity-75 mb-0 fw-light">
+                        Gestiona a tus conserjes y seguridad, registra sus bonos y genera sus comprobantes de pago de nómina con un solo clic.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Feature 4 -->
+            <div class="col-md-6 offset-lg-2 col-lg-4">
+                <div class="glass-card p-5 h-100 text-center">
+                    <i class="fa-solid fa-shield-halved feature-icon"></i>
+                    <h4 class="fw-bold mb-3">Seguridad de Nivel Bancario</h4>
+                    <p class="text-light opacity-75 mb-0 fw-light">
+                        Aislamiento total de datos. La información financiera de tu torre es estrictamente confidencial e impenetrable.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Feature 5 -->
+            <div class="col-md-6 col-lg-4">
+                <div class="glass-card p-5 h-100 text-center">
+                    <i class="fa-solid fa-people-arrows feature-icon"></i>
+                    <h4 class="fw-bold mb-3">Comunidad Conectada</h4>
+                    <p class="text-light opacity-75 mb-0 fw-light">
+                        Reservas de áreas sociales a prueba de choques y tablero de anuncios oficial para mantener informados a los residentes.
+                    </p>
+                </div>
+            </div>
+            
+        </div>
+    </section>
+
+    <!-- 3. How It Works Section -->
+    <section class="py-5 container mt-5">
+        <h2 class="section-title">¿Cómo Funciona?</h2>
+        <div class="row text-center position-relative mt-5">
+            <div class="col-lg-4 mb-5 mb-lg-0">
+                <div class="step-connector">
+                    <div class="step-number">1</div>
+                </div>
+                <h4 class="fw-bold mt-4">Crea tu cuenta de prueba gratis</h4>
+                <p class="text-light opacity-75 px-3 fw-light">Regístrate y descubre nuestra plataforma sin compromisos en menos de 2 minutos.</p>
+            </div>
+            <div class="col-lg-4 mb-5 mb-lg-0">
+                <div class="step-connector">
+                    <div class="step-number">2</div>
+                </div>
+                <h4 class="fw-bold mt-4">Registra apartamentos y gastos</h4>
+                <p class="text-light opacity-75 px-3 fw-light">Configura tu comunidad, residentes y el presupuesto de manera sencilla e intuitiva.</p>
+            </div>
+            <div class="col-lg-4">
+                <div class="step-connector">
+                    <div class="step-number"><i class="fa-solid fa-check"></i></div>
+                </div>
+                <h4 class="fw-bold mt-4">Deja que el sistema automatice</h4>
+                <p class="text-light opacity-75 px-3 fw-light">Relájate mientras nuestro software procesa las finanzas, cobra y notifica por ti.</p>
             </div>
         </div>
     </section>
 
-    <div style="height: 60px; background-color: #f8f9fa;"></div>
-
-    <section id="beneficios" class="py-5 bg-light">
-        <div class="container py-5">
-            <div class="text-center mb-5">
-                <h2 class="fw-bold">Todo lo que tu junta de vecinos necesita</h2>
-                <p class="text-muted">Diseñado para ahorrarle horas de trabajo al administrador y darle paz mental a los residentes.</p>
-            </div>
-
-            <div class="row g-4">
-                <div class="col-md-4 text-center">
-                    <div class="card border-0 shadow-sm h-100 p-4">
-                        <div class="feature-icon"><i class="bi bi-graph-up-arrow"></i></div>
-                        <h4 class="fw-bold">Transparencia Total</h4>
-                        <p class="text-muted">Gráficos claros de en qué se gasta cada centavo. Genera reportes financieros listos para proyectar en las asambleas.</p>
-                    </div>
-                </div>
-                <div class="col-md-4 text-center">
-                    <div class="card border-0 shadow-sm h-100 p-4">
-                        <div class="feature-icon"><i class="bi bi-shield-check"></i></div>
-                        <h4 class="fw-bold">Cero Morosidad</h4>
-                        <p class="text-muted">Reportes de antigüedad de deuda (Aging) y estados de cuenta individuales en PDF. Bloquea reservas a vecinos morosos automáticamente.</p>
-                    </div>
-                </div>
-                <div class="col-md-4 text-center">
-                    <div class="card border-0 shadow-sm h-100 p-4">
-                        <div class="feature-icon"><i class="bi bi-whatsapp"></i></div>
-                        <h4 class="fw-bold">Listo para WhatsApp</h4>
-                        <p class="text-muted">Exporta reportes de consumo de gas y recibos de pago con formatos optimizados para enviarlos al grupo del residencial.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="modulos" class="py-5">
-        <div class="container py-5">
-            <div class="row align-items-center mb-5">
-                <div class="col-lg-6 mb-4 mb-lg-0">
-                    <div class="bg-light p-4 rounded-4 shadow-sm text-center">
-                        <h1 class="display-1 text-primary"><i class="bi bi-calendar-check"></i></h1>
-                    </div>
-                </div>
-                <div class="col-lg-6 ps-lg-5">
-                    <h2 class="fw-bold mb-3">Reservas de Áreas Sociales</h2>
-                    <p class="text-muted fs-5 mb-4">Se acabaron los choques de horarios en la piscina o el gazebo. Cada residente reserva desde su celular.</p>
-                    <ul class="list-unstyled">
-                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Calendario visual de disponibilidad en tiempo real.</li>
-                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Reglas automáticas: horas máximas y días de anticipación.</li>
-                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Bloqueo automático para usuarios con cuotas vencidas.</li>
+    <!-- 4. Pricing Section -->
+    <section class="py-5 container mt-5 mb-5">
+        <h2 class="section-title">Planes y Precios Transparentes</h2>
+        <div class="row g-4 justify-content-center">
+            
+            <!-- Trial Plan -->
+            <div class="col-md-6 col-lg-4">
+                <div class="glass-card pricing-card">
+                    <h4 class="fw-bold text-uppercase opacity-75 text-center">Plan Trial</h4>
+                    <div class="price text-center">Gratis</div>
+                    <p class="opacity-75 text-center fw-light">Para explorar todo el potencial</p>
+                    <hr class="border-secondary my-4" style="opacity: 0.2;">
+                    <ul class="pricing-features">
+                        <li><i class="fa-solid fa-check"></i> 30 días gratis de acceso total</li>
+                        <li><i class="fa-solid fa-check"></i> Prueba el Robot Cobrador</li>
+                        <li><i class="fa-solid fa-check"></i> Acceso a Módulo HR</li>
                     </ul>
+                    <a href="#" class="btn btn-outline-light-glass w-100 mt-auto">Iniciar Prueba</a>
                 </div>
             </div>
 
-            <div class="row align-items-center flex-row-reverse">
-                <div class="col-lg-6 mb-4 mb-lg-0">
-                    <div class="bg-light p-4 rounded-4 shadow-sm text-center">
-                        <h1 class="display-1 text-danger"><i class="bi bi-tools"></i></h1>
-                    </div>
-                </div>
-                <div class="col-lg-6 pe-lg-5">
-                    <h2 class="fw-bold mb-3">Tickets y Averías</h2>
-                    <p class="text-muted fs-5 mb-4">Centraliza los problemas del edificio. Si hay una fuga o el portón no abre, los vecinos lo reportan al instante.</p>
-                    <ul class="list-unstyled">
-                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Los vecinos suben fotos de la incidencia.</li>
-                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> El administrador recibe y gestiona el estado del ticket.</li>
-                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Historial de mantenimiento del edificio guardado.</li>
+            <!-- Standard Plan -->
+            <div class="col-md-6 col-lg-4">
+                <div class="glass-card pricing-card pricing-popular">
+                    <div class="popular-badge">MÁS ELEGIDO</div>
+                    <h4 class="fw-bold text-uppercase text-center" style="color: var(--accent-mint)">Standard</h4>
+                    <div class="price text-center">$<span class="fs-4 fw-normal opacity-75">Base/Apto</span></div>
+                    <p class="opacity-75 text-center fw-light">Cobro base por apartamento</p>
+                    <hr class="border-secondary my-4" style="opacity: 0.2;">
+                    <ul class="pricing-features">
+                        <li><i class="fa-solid fa-check"></i> 2 Usuarios Administradores incluidos</li>
+                        <li><i class="fa-solid fa-check"></i> Facturación y cobros automáticos</li>
+                        <li><i class="fa-solid fa-check"></i> Transparencia Financiera (Gráficos)</li>
+                        <li><i class="fa-solid fa-check"></i> Soporte prioritario</li>
                     </ul>
+                    <a href="#" class="btn btn-mint w-100 mt-auto">Seleccionar Standard</a>
                 </div>
             </div>
+
+            <!-- Premium Plan -->
+            <div class="col-md-6 col-lg-4">
+                <div class="glass-card pricing-card">
+                    <h4 class="fw-bold text-uppercase opacity-75 text-center">Premium</h4>
+                    <div class="price text-center"><i class="fa-solid fa-infinity fs-1"></i></div>
+                    <p class="opacity-75 text-center fw-light">Gestión integral sin límites</p>
+                    <hr class="border-secondary my-4" style="opacity: 0.2;">
+                    <ul class="pricing-features">
+                        <li><i class="fa-solid fa-check"></i> Todo lo del plan Standard</li>
+                        <li><i class="fa-solid fa-check"></i> Usuarios administradores ilimitados</li>
+                        <li><i class="fa-solid fa-check"></i> Módulo completo de Nómina y RRHH</li>
+                        <li><i class="fa-solid fa-check"></i> Asesoría y Onboarding dedicado</li>
+                    </ul>
+                    <a href="#" class="btn btn-outline-light-glass w-100 mt-auto">Contactar Ventas</a>
+                </div>
+            </div>
+
         </div>
     </section>
 
-    <section class="bg-primary text-white text-center py-5">
-        <div class="container py-5">
-            <h2 class="fw-bold mb-4">¿Listo para profesionalizar tu condominio?</h2>
-            <p class="fs-5 mb-4 opacity-75">Agenda una demostración guiada y descubre cómo podemos adaptar el sistema a tu residencial.</p>
-            <a href="https://wa.me/18493532097?text=Hola,%20me%20interesa%20un%20demo%20del%20sistema%20residencial" target="_blank" class="btn btn-light text-primary btn-cta shadow-lg">
-                <i class="bi bi-whatsapp"></i> Hablemos por WhatsApp
-            </a>
-        </div>
-    </section>
-
-    <footer class="bg-dark text-white py-4 text-center">
-        <div class="container">
-            <p class="mb-0 text-white-50">&copy; 2026 SmartResidencial. Todos los derechos reservados.</p>
+    <!-- Footer -->
+    <footer class="py-5 mt-5 border-top" style="border-color: rgba(255,255,255,0.05) !important; background: rgba(0,0,0,0.2);">
+        <div class="container text-center">
+            <p class="text-light opacity-50 mb-0 fw-light">© 2026 SaaS Residencial. La plataforma definitiva para la gestión inteligente de condominios.</p>
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
