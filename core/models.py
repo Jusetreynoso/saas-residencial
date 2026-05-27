@@ -252,7 +252,7 @@ class LecturaGas(models.Model):
     # Default decimal para evitar conflictos con float
     factor_conversion = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('1.20'))
     
-    consumo_galones = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    consumo_galones = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True)
     total_a_pagar = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     
     factura_generada = models.ForeignKey(Factura, on_delete=models.SET_NULL, null=True, blank=True)
@@ -261,15 +261,16 @@ class LecturaGas(models.Model):
         # 1. Consumo m3
         consumo_m3 = self.lectura_actual - self.lectura_anterior
         if consumo_m3 < 0:
-            consumo_m3 = Decimal('0.00')
+            consumo_m3 = Decimal('0.000')
         
         # 2. Convertir factor a Decimal para cálculo seguro
         factor_seguro = Decimal(str(self.factor_conversion))
         
-        self.consumo_galones = consumo_m3 * factor_seguro
+        # 3. Calcular galones con 3 decimales
+        self.consumo_galones = (consumo_m3 * factor_seguro).quantize(Decimal('0.001'))
         
-        # 3. Calculamos dinero
-        self.total_a_pagar = self.consumo_galones * self.precio_galon_mes
+        # 4. Calculamos dinero con 2 decimales (monto a pagar)
+        self.total_a_pagar = (self.consumo_galones * self.precio_galon_mes).quantize(Decimal('0.01'))
         
         super().save(*args, **kwargs)
 

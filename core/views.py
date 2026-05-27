@@ -363,7 +363,7 @@ def registrar_lectura_gas(request):
                             residencial=request.user.residencial,
                             usuario=residente,
                             tipo='GAS',
-                            concepto=f"Gas: {lectura.lectura_anterior} -> {lectura.lectura_actual} ({consumo:.2f} gls)",
+                            concepto=f"Gas: {lectura.lectura_anterior:.3f} -> {lectura.lectura_actual:.3f} ({consumo:.3f} m3 / {lectura.consumo_galones:.3f} gls)",
                             monto=lectura.total_a_pagar,
                             fecha_vencimiento=timezone.now().date() + timedelta(days=15),
                             estado='PENDIENTE',
@@ -413,12 +413,12 @@ def registrar_lectura_gas(request):
             'id': apt.id,
             'apto': apt.numero,
             'ultima_fecha': ultima.fecha_lectura if ultima else "---",
-            'lectura_anterior': ultima.lectura_anterior if ultima else 0.000,
-            'lectura_actual': ultima.lectura_actual if ultima else 0.000,
-            'consumo': (ultima.lectura_actual - ultima.lectura_anterior) if ultima else 0.00,
-            'galones': ultima.consumo_galones if ultima else 0.00,
-            'precio': ultima.precio_galon_mes if ultima else 0.00,
-            'total': ultima.total_a_pagar if ultima else 0.00,
+            'lectura_anterior': ultima.lectura_anterior if ultima else Decimal('0.000'),
+            'lectura_actual': ultima.lectura_actual if ultima else Decimal('0.000'),
+            'consumo': (ultima.lectura_actual - ultima.lectura_anterior) if ultima else Decimal('0.000'),
+            'galones': ultima.consumo_galones if ultima else Decimal('0.000'),
+            'precio': ultima.precio_galon_mes if ultima else Decimal('0.00'),
+            'total': ultima.total_a_pagar if ultima else Decimal('0.00'),
         }
         estado_medidores.append(datos)
 
@@ -1345,7 +1345,7 @@ def reporte_gas_whatsapp(request):
     
     # 2. Agrupar por edificio (Primera letra del apto, ej: "A" de "A-101")
     datos_por_edificio = {}
-    total_general_galones = Decimal('0.00')
+    total_general_galones = Decimal('0.000')
     total_general_pagar = Decimal('0.00')
     
     for apt in apartamentos:
@@ -1353,7 +1353,7 @@ def reporte_gas_whatsapp(request):
         if edificio not in datos_por_edificio:
             datos_por_edificio[edificio] = {
                 'apartamentos': [],
-                'subtotal_galones': Decimal('0.00'),
+                'subtotal_galones': Decimal('0.000'),
                 'subtotal_pagar': Decimal('0.00')
             }
             
@@ -1366,36 +1366,56 @@ def reporte_gas_whatsapp(request):
             fecha_lectura__year=anio_reporte
         ).first()
         
-        galones = lectura_mes.consumo_galones if lectura_mes else Decimal('0.00')
-        costo_mes = galones * precio_galon
+        galones = lectura_mes.consumo_galones if lectura_mes else Decimal('0.000')
+        costo_mes = lectura_mes.total_a_pagar if lectura_mes else Decimal('0.00')
+        factura_mes = lectura_mes.factura_generada if lectura_mes else None
         
         deuda_total_gas = Decimal('0.00')
-        saldo_favor = Decimal('0.00')
+        saldo_favor_restante = Decimal('0.00')
+        descuento_aplicado = Decimal('0.00')
         
         if dueno:
-            facturas_gas = Factura.objects.filter(usuario=dueno, tipo='GAS', estado='PENDIENTE')
-            deuda_total_gas = sum((f.saldo_pendiente or f.monto) for f in facturas_gas)
-            saldo_favor = dueno.saldo_favor_gas or Decimal('0.00')
+            # Obtener facturas de gas que estén en estado PENDIENTE o PARCIAL
+            facturas_gas = Factura.objects.filter(usuario=dueno, tipo='GAS', estado__in=['PENDIENTE', 'PARCIAL'])
+            deuda_total_gas = sum((f.saldo_pendiente if f.saldo_pendiente is not None else f.monto) for f in facturas_gas)
+            saldo_favor_restante = dueno.saldo_favor_gas or Decimal('0.00')
             
+            if factura_mes:
+                # El saldo a favor que se aplicó directamente a esta factura al momento de generarse
+                descuento_aplicado = factura_mes.monto_pagado or Decimal('0.00')
+                
+        # Deuda anterior = deuda total menos la parte que pertenece a la factura de este mes
+        parte_pendiente_mes = Decimal('0.00')
+        if factura_mes and factura_mes.estado in ['PENDIENTE', 'PARCIAL']:
+            parte_pendiente_mes = factura_mes.saldo_pendiente if factura_mes.saldo_pendiente is not None else factura_mes.monto
+            
+        deuda_anterior = deuda_total_gas - parte_pendiente_mes
+        if deuda_anterior < 0:
+            deuda_anterior = Decimal('0.00')
+            
+        # Saldo a favor anterior total = saldo a favor restante + descuento ya aplicado a la factura de este mes
+        saldo_favor_anterior = saldo_favor_restante + descuento_aplicado
+        
+        # El balance neto anterior es deuda anterior menos el saldo a favor anterior
+        balance_neto = deuda_anterior - saldo_favor_anterior
+        
+        # El monto final real a pagar por el usuario (incluye deuda de meses anteriores y consumo actual menos saldos a favor)
         a_pagar = deuda_total_gas
         
-        # 3. Lógica del Balance (Igual a tu Excel)
-        if saldo_favor > 0:
-            # En tu Excel el saldo a favor sale en negativo
-            balance_txt = f"-${saldo_favor:.2f}" 
+        if balance_neto < 0:
+            # Si el balance es a favor (negativo), se muestra con signo negativo en verde
+            balance_txt = f"-${abs(balance_neto):.2f}"
             color_balance = "text-success fw-bold"
+        elif balance_neto > 0:
+            # Si tiene deuda anterior, se muestra en rojo
+            balance_txt = f"${balance_neto:.2f}"
+            color_balance = "text-danger fw-bold"
         else:
-            # Verificamos si debe de meses anteriores
-            deuda_anterior = deuda_total_gas - costo_mes
-            if deuda_anterior > 0:
-                balance_txt = f"${deuda_anterior:.2f}"
-                color_balance = "text-danger fw-bold"
-            else:
-                balance_txt = "$0.00"
-                color_balance = "text-muted"
+            balance_txt = "$0.00"
+            color_balance = "text-muted"
                 
-        # Solo lo agregamos al reporte si consumió gas o si debe dinero
-        if galones > 0 or a_pagar > 0:
+        # Solo lo agregamos al reporte si consumió gas o si debe/tiene saldo a favor anterior
+        if galones > 0 or a_pagar > 0 or balance_neto != 0:
             datos_por_edificio[edificio]['apartamentos'].append({
                 'numero': apt.numero,
                 'galones': galones,

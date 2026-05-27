@@ -88,7 +88,7 @@
                     {% for apt in datos.apartamentos %}
                     <tr class="{% cycle 'bg-light' 'bg-excel-grey' %}">
                         <td class="text-primary fw-bold text-start ps-3">{{ apt.numero }}</td>
-                        <td>{{ apt.galones|floatformat:2 }}</td>
+                        <td>{{ apt.galones|floatformat:3 }}</td>
                         <td class="{{ apt.color_balance }}">{{ apt.balance_txt }}</td>
                         <td class="bg-excel-green text-end pe-3">${{ apt.a_pagar|floatformat:2 }}</td>
                     </tr>
@@ -96,7 +96,7 @@
                     
                     <tr class="fw-bold">
                         <td class="bg-excel-green text-start ps-3">Sub Total</td>
-                        <td>{{ datos.subtotal_galones|floatformat:2 }}</td>
+                        <td>{{ datos.subtotal_galones|floatformat:3 }}</td>
                         <td></td>
                         <td class="text-end pe-3" style="text-decoration: underline;">${{ datos.subtotal_pagar|floatformat:2 }}</td>
                     </tr>
