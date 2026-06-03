@@ -87,6 +87,9 @@ urlpatterns = [
 
     path('reportes/transparencia/', views.reporte_transparencia, name='reporte_transparencia'),
 
+    path('finanzas/categorias/', views.configurar_categorias, name='configurar_categorias'),
+    path('finanzas/categorias/toggle/<int:categoria_id>/', views.toggle_categoria, name='toggle_categoria'),
+
     # RUTA DE LA BITÁCORA DE AUDITORÍA
     path('auditoria/', views.ver_bitacora, name='ver_bitacora'),
 

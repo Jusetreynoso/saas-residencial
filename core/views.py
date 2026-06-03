@@ -30,7 +30,7 @@ from .forms import (
     PagoNominaForm
 )
 
-from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia, ReportePago, IngresoExtraordinario, Bitacora, ProductoMarketplace, CategoriaMarketplace, Empleado, PagoNomina
+from .models import Residencial, Reserva, Apartamento, Usuario, BloqueoFecha, Factura, LecturaGas, Gasto, Aviso, Incidencia, ReportePago, IngresoExtraordinario, Bitacora, ProductoMarketplace, CategoriaMarketplace, Empleado, PagoNomina, Categoria
 from django.db import transaction
 from django.db.models import Sum, Max, Count, Q, F, Case, When, Value
 from django.db.models.functions import TruncMonth, Coalesce
@@ -605,7 +605,7 @@ def registrar_gasto(request):
         return redirect('dashboard')
 
     if request.method == 'POST':
-        form = GastoForm(request.POST)
+        form = GastoForm(request.user, request.POST)
         if form.is_valid():
             gasto = form.save(commit=False)
             gasto.residencial = request.user.residencial
@@ -613,7 +613,7 @@ def registrar_gasto(request):
             messages.success(request, f"📉 Gasto registrado: {gasto.descripcion} - ${gasto.monto}")
             return redirect('registrar_gasto')
     else:
-        form = GastoForm(initial={'fecha_gasto': timezone.now().date()})
+        form = GastoForm(request.user, initial={'fecha_gasto': timezone.now().date()})
 
     ultimos_gastos = Gasto.objects.filter(residencial=request.user.residencial).order_by('-fecha_gasto')[:10]
     
@@ -1716,8 +1716,14 @@ def reporte_transparencia(request):
     # Agrupamos los gastos por categoría en la base de datos
     gastos_por_categoria = gastos_mes.values('categoria').annotate(total=Sum('monto')).order_by('-total')
     
-    # --- CORRECCIÓN AQUÍ: Usamos TUS categorías exactas ---
-    cat_dict = dict(Gasto.CATEGORIAS)
+    # Preparamos un diccionario con todas las categorías de este residencial en la BD para traducir sus códigos a nombres bonitos
+    cat_qs = Categoria.objects.filter(residencial=residencial, tipo='GASTO')
+    cat_dict = {c.codigo: c.nombre for c in cat_qs}
+    
+    # Fusionar con el dict predeterminado de Gasto.CATEGORIAS para compatibilidad con gastos históricos
+    for codigo, nombre in Gasto.CATEGORIAS:
+        if codigo not in cat_dict:
+            cat_dict[codigo] = nombre
     
     # Preparamos las listas para el gráfico de Chart.js
     chart_labels = []
@@ -1981,3 +1987,102 @@ def comprobante_nomina(request, pago_id):
         'pago': pago,
         'residencial': request.user.residencial
     })
+
+
+import re
+import unicodedata
+
+def generar_codigo_categoria(nombre):
+    # Normalize, remove accents, keep alphanumeric and spaces
+    n = unicodedata.normalize('NFKD', nombre).encode('ascii', 'ignore').decode('utf-8')
+    n = re.sub(r'[^a-zA-Z0-9\s]', '', n)
+    return '_'.join(n.strip().split()).upper()
+
+@login_required
+def configurar_categorias(request):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+        
+    residencial = request.user.residencial
+    if not residencial:
+        messages.error(request, "No tienes un residencial asignado.")
+        return redirect('dashboard')
+        
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre', '').strip()
+        tipo = request.POST.get('tipo', '').strip()
+        
+        if not nombre or tipo not in ['GASTO', 'INGRESO']:
+            messages.error(request, "Datos de categoría inválidos.")
+        else:
+            codigo = generar_codigo_categoria(nombre)
+            if not codigo:
+                messages.error(request, "Nombre de categoría no es válido.")
+            else:
+                # Validar si ya existe
+                existe = Categoria.objects.filter(
+                    residencial=residencial,
+                    nombre__iexact=nombre,
+                    tipo=tipo
+                ).exists()
+                
+                if existe:
+                    messages.warning(request, f"Ya existe una categoría de {tipo.lower()} con ese nombre.")
+                else:
+                    base_codigo = codigo
+                    contador = 1
+                    while Categoria.objects.filter(residencial=residencial, codigo=codigo, tipo=tipo).exists():
+                        codigo = f"{base_codigo}_{contador}"
+                        contador += 1
+                        
+                    Categoria.objects.create(
+                        residencial=residencial,
+                        nombre=nombre,
+                        codigo=codigo,
+                        tipo=tipo,
+                        activo=True
+                    )
+                    messages.success(request, f"Categoría '{nombre}' agregada con éxito.")
+                    
+                    # Log en Bitácora
+                    Bitacora.objects.create(
+                        residencial=residencial,
+                        usuario=request.user,
+                        modulo='FINANZAS',
+                        accion=f"Creó la categoría de {tipo.lower()}: '{nombre}' (código: {codigo}).",
+                        nivel='INFO'
+                    )
+                    return redirect('configurar_categorias')
+                    
+    categorias_gastos = Categoria.objects.filter(residencial=residencial, tipo='GASTO').order_by('nombre')
+    categorias_ingresos = Categoria.objects.filter(residencial=residencial, tipo='INGRESO').order_by('nombre')
+    
+    return render(request, 'core/configurar_categorias.html', {
+        'categorias_gastos': categorias_gastos,
+        'categorias_ingresos': categorias_ingresos,
+    })
+
+@login_required
+def toggle_categoria(request, categoria_id):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+        
+    residencial = request.user.residencial
+    categoria = get_object_or_404(Categoria, id=categoria_id, residencial=residencial)
+    
+    categoria.activo = not categoria.activo
+    categoria.save()
+    
+    estado = "activada" if categoria.activo else "desactivada"
+    messages.success(request, f"Categoría '{categoria.nombre}' {estado} con éxito.")
+    
+    # Log en Bitácora
+    Bitacora.objects.create(
+        residencial=residencial,
+        usuario=request.user,
+        modulo='FINANZAS',
+        accion=f"Cambió el estado de la categoría '{categoria.nombre}' a: {estado.upper()}.",
+        nivel='WARNING'
+    )
+    
+    return redirect('configurar_categorias')

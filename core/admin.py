@@ -4,7 +4,7 @@ from django.contrib.auth.admin import UserAdmin
 from .models import (
     Usuario, Residencial, Apartamento, AreaSocial, 
     Reserva, BloqueoFecha, Gasto, Factura, LecturaGas, Aviso, Incidencia, ReportePago, IngresoExtraordinario,
-    CategoriaMarketplace, ProductoMarketplace
+    CategoriaMarketplace, ProductoMarketplace, Categoria
 )
 
 # --- CONFIGURACIÓN DE USUARIO ---
@@ -115,3 +115,10 @@ class ProductoMarketplaceAdmin(admin.ModelAdmin):
     list_filter = ('estado', 'categoria', 'residencial')
     search_fields = ('titulo', 'descripcion', 'vendedor__username', 'residencial__nombre')
     readonly_fields = ('fecha_publicacion',)
+
+
+@admin.register(Categoria)
+class CategoriaAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'codigo', 'tipo', 'activo', 'residencial')
+    list_filter = ('tipo', 'activo', 'residencial')
+    search_fields = ('nombre', 'codigo')

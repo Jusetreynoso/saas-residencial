@@ -602,3 +602,74 @@ class Visita(models.Model):
 
     def __str__(self):
         return f"{self.nombre_visitante} -> {self.apartamento.numero} ({self.get_estado_display()})"
+
+
+class Categoria(models.Model):
+    TIPO_CHOICES = (
+        ('GASTO', 'Gasto'),
+        ('INGRESO', 'Ingreso'),
+    )
+    
+    residencial = models.ForeignKey(Residencial, on_delete=models.CASCADE, related_name='categorias')
+    nombre = models.CharField(max_length=100)
+    codigo = models.CharField(max_length=50)  # Ej: 'COMPRAS_GAS', 'MANT_ASCENSOR'
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES)
+    activo = models.BooleanField(default=True)
+    
+    class Meta:
+        unique_together = ('residencial', 'nombre', 'tipo')
+        
+    def __str__(self):
+        return f"{self.nombre} ({self.tipo}) - {self.residencial.nombre}"
+
+
+# Receptor de señal para inicializar categorías cuando se crea un Residencial
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+# Listas de categorías por defecto
+CATEGORIAS_GASTO_DEFAULT = [
+    ('COMPRAS_GAS', 'Compras Gas (Camión)'),
+    ('COMPRAS_GENERALES', 'Compras Generales (Insumos, limpieza, etc.)'),
+    ('SERV_ELECTRICIDAD', 'Servicios: Electricidad'),
+    ('SERV_AGUA', 'Servicios: Agua'),
+    ('SERV_INTERNET', 'Servicios: Teléfono e Internet'),
+    ('SERV_AYUNTAMIENTO', 'Servicios: Ayuntamiento (Recogida de basura/tasas)'),
+    ('MANT_GENERAL', 'Mantenimiento y Reparaciones Generales'),
+    ('MANT_PISCINA', 'Mantenimiento de Piscina'),
+    ('MANT_ASCENSORES', 'Mantenimiento de Ascensores'),
+    ('JARDINERIA', 'Jardinería y Áreas Verdes'),
+    ('FUMIGACION', 'Fumigación y Control de Plagas'),
+    ('NOMINA', 'Nómina y Personal (Conserjes, seguridad, etc.)'),
+    ('HONORARIOS_PROF', 'Honorarios Profesionales (Contables, legales)'),
+    ('SEGUROS', 'Seguros (Pólizas del edificio)'),
+    ('IMPUESTOS', 'Impuestos'),
+    ('DONACIONES', 'Donaciones'),
+    ('IMPREVISTOS', 'Imprevistos y Caja Chica'),
+]
+
+CATEGORIAS_INGRESO_DEFAULT = [
+    ('CONTROL', 'Venta de Control/Token'),
+    ('BBQ', 'Uso de Gas BBQ'),
+    ('MULTA', 'Multa / Sanción'),
+    ('DANOS', 'Cobro por Daños (Sillas/Áreas)'),
+    ('OTROS', 'Otros Ingresos'),
+]
+
+@receiver(post_save, sender=Residencial)
+def inicializar_categorias_residencial(sender, instance, created, **kwargs):
+    if created:
+        for codigo, nombre in CATEGORIAS_GASTO_DEFAULT:
+            Categoria.objects.get_or_create(
+                residencial=instance,
+                codigo=codigo,
+                tipo='GASTO',
+                defaults={'nombre': nombre, 'activo': True}
+            )
+        for codigo, nombre in CATEGORIAS_INGRESO_DEFAULT:
+            Categoria.objects.get_or_create(
+                residencial=instance,
+                codigo=codigo,
+                tipo='INGRESO',
+                defaults={'nombre': nombre, 'activo': True}
+            )

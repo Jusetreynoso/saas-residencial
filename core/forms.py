@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta, datetime
 # IMPORTANTE: Agregamos Usuario a esta lista y quitamos la importación de 'auth.User'
-from .models import Reserva, AreaSocial, BloqueoFecha, LecturaGas, Apartamento, Gasto, Aviso, Usuario, Incidencia, ReportePago, IngresoExtraordinario, Residencial, PlanSuscripcion, ProductoMarketplace, CategoriaMarketplace, Empleado, PagoNomina, Visita
+from .models import Reserva, AreaSocial, BloqueoFecha, LecturaGas, Apartamento, Gasto, Aviso, Usuario, Incidencia, ReportePago, IngresoExtraordinario, Residencial, PlanSuscripcion, ProductoMarketplace, CategoriaMarketplace, Empleado, PagoNomina, Visita, Categoria
 
 # ==========================================
 # 1. FORMULARIO DE RESERVAS
@@ -155,6 +155,16 @@ class GastoForm(forms.ModelForm):
             'descripcion': 'Descripción del Gasto',
             'fecha_gasto': 'Fecha de Factura',
         }
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user and user.residencial:
+            categorias = Categoria.objects.filter(
+                residencial=user.residencial, 
+                tipo='GASTO', 
+                activo=True
+            ).order_by('nombre')
+            self.fields['categoria'].choices = [(c.codigo, c.nombre) for c in categorias]
 
 # ==========================================
 # 4. FORMULARIO DE AVISOS
@@ -311,6 +321,12 @@ class IngresoExtraForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if admin_user and admin_user.residencial:
             self.fields['Apartamento'].queryset = Apartamento.objects.filter(residencial=admin_user.residencial)
+            categorias = Categoria.objects.filter(
+                residencial=admin_user.residencial, 
+                tipo='INGRESO', 
+                activo=True
+            ).order_by('nombre')
+            self.fields['categoria'].choices = [(c.codigo, c.nombre) for c in categorias]
 
 # ==========================================
 # 6. SAAS ONBOARDING (SUPERADMIN)
