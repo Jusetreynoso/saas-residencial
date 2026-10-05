@@ -98,6 +98,10 @@
                     📸 Reportar Pago
                  </button>
                  
+                 <a href="{% url 'reporte_estado_cuenta' %}" class="btn btn-outline-primary shadow-sm fw-bold">
+                    📄 Estado de Cuenta
+                 </a>
+
                  {% if user.residencial.modulo_seguridad_activo %}
                  <a href="{% url 'mis_visitas' %}" class="btn btn-info text-white shadow-sm fw-bold">
                     🛡️ Registrar Visita

@@ -1642,29 +1642,30 @@ def reporte_mensual_dinamico(request):
 
 @login_required
 def reporte_estado_cuenta(request):
-    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
-        return redirect('dashboard')
-
     residencial = request.user.residencial
     
-    # Lista de vecinos para el selector
-    vecinos = Usuario.objects.filter(residencial=residencial).order_by('apartamento__numero')
-    
-    vecino_seleccionado = None
-    facturas = []
-    total_deuda = Decimal('0.00')
-
-    # Si se seleccionó un vecino en el formulario
-    usuario_id = request.GET.get('usuario_id')
-    if usuario_id:
-        vecino_seleccionado = get_object_or_404(Usuario, id=usuario_id, residencial=residencial)
-        
-        # Traemos todas sus facturas (pagadas y pendientes) ordenadas de la más nueva a la más vieja
-        facturas = Factura.objects.filter(usuario=vecino_seleccionado).order_by('-fecha_emision')
-        
-        # Calculamos la deuda total actual
+    # Si el usuario es un RESIDENTE, solo puede ver su propio estado de cuenta (seguridad estricta)
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        vecinos = None
+        vecino_seleccionado = request.user
+        facturas = Factura.objects.filter(usuario=request.user).order_by('-fecha_emision')
         deudas = facturas.filter(estado='PENDIENTE')
         total_deuda = sum((f.saldo_pendiente if f.saldo_pendiente is not None else f.monto) for f in deudas)
+    else:
+        # Lista de vecinos para el selector del Administrador
+        vecinos = Usuario.objects.filter(residencial=residencial).order_by('apartamento__numero')
+        
+        vecino_seleccionado = None
+        facturas = []
+        total_deuda = Decimal('0.00')
+
+        # Si el administrador seleccionó un vecino en el formulario
+        usuario_id = request.GET.get('usuario_id')
+        if usuario_id:
+            vecino_seleccionado = get_object_or_404(Usuario, id=usuario_id, residencial=residencial)
+            facturas = Factura.objects.filter(usuario=vecino_seleccionado).order_by('-fecha_emision')
+            deudas = facturas.filter(estado='PENDIENTE')
+            total_deuda = sum((f.saldo_pendiente if f.saldo_pendiente is not None else f.monto) for f in deudas)
 
     context = {
         'vecinos': vecinos,

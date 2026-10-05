@@ -164,3 +164,21 @@ class CategoriaTestCase(TestCase):
         # Verificar que la lectura y factura hayan sido eliminadas
         self.assertFalse(LecturaGas.objects.filter(id=lectura.id).exists())
         self.assertFalse(Factura.objects.filter(id=factura.id).exists())
+
+    def test_estado_cuenta_residente_privacidad(self):
+        residente1 = Usuario.objects.create_user(
+            username="residente1",
+            password="password123",
+            rol="RESIDENTE",
+            residencial=self.res1
+        )
+        # Iniciar sesión como residente1
+        self.client.login(username='residente1', password='password123')
+        
+        # Intentar acceder al estado de cuenta pasando el id de otro usuario (admin1)
+        response = self.client.get(f'/reportes/estado-cuenta/?usuario_id={self.admin1.id}')
+        self.assertEqual(response.status_code, 200)
+        
+        # Verificar que la respuesta contiene el usuario residente1 y NO admin1
+        self.assertEqual(response.context['vecino_seleccionado'], residente1)
+        self.assertIsNone(response.context['vecinos'])

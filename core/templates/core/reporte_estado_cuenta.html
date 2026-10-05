@@ -50,10 +50,15 @@
 
 <div class="container mt-4 no-print">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <a href="{% url 'menu_reportes' %}" class="btn btn-outline-secondary">⬅ Volver al Menú</a>
+        {% if user.rol == 'ADMIN_RESIDENCIAL' or user.is_superuser %}
+            <a href="{% url 'menu_reportes' %}" class="btn btn-outline-secondary">⬅ Volver al Menú</a>
+        {% else %}
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">⬅ Volver al Dashboard</a>
+        {% endif %}
         <button onclick="window.print()" class="btn btn-dark fw-bold" {% if not vecino_seleccionado %}disabled{% endif %}>🖨️ Imprimir PDF</button>
     </div>
 
+    {% if user.rol == 'ADMIN_RESIDENCIAL' or user.is_superuser %}
     <div class="card shadow-sm mb-4">
         <div class="card-body bg-light">
             <form method="GET" class="d-flex gap-3 align-items-end">
@@ -72,6 +77,7 @@
             </form>
         </div>
     </div>
+    {% endif %}
 </div>
 
 {% if vecino_seleccionado %}
