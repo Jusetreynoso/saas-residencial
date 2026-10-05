@@ -120,3 +120,47 @@ class CategoriaTestCase(TestCase):
         form2 = GastoForm(user=self.admin2)
         choices_res2 = dict(form2.fields['categoria'].choices)
         self.assertNotIn("MANTENIMIENTO_ELEVADOR_B", choices_res2)
+
+    def test_eliminar_lectura_gas_y_factura(self):
+        """Verifica que un administrador pueda eliminar una lectura de gas errónea y su factura asociada."""
+        from core.models import LecturaGas, Factura
+        from decimal import Decimal
+
+        # Crear residente y asignarle el apto1
+        residente = Usuario.objects.create_user(
+            username="residente1",
+            password="password123",
+            rol="RESIDENTE",
+            residencial=self.res1,
+            apartamento=self.apto1
+        )
+        
+        # Crear factura de gas errónea y su lectura
+        factura = Factura.objects.create(
+            residencial=self.res1,
+            usuario=residente,
+            tipo='GAS',
+            concepto='Gas Erróneo',
+            monto=Decimal('500.00'),
+            fecha_vencimiento='2026-12-31',
+            saldo_pendiente=Decimal('500.00')
+        )
+        lectura = LecturaGas.objects.create(
+            residencial=self.res1,
+            apartamento=self.apto1,
+            lectura_anterior=Decimal('10.000'),
+            lectura_actual=Decimal('500.000'),
+            precio_galon_mes=Decimal('150.00'),
+            factura_generada=factura
+        )
+
+        # Iniciar sesión como admin1
+        self.client.login(username='admin1', password='password123')
+        
+        # Ejecutar la eliminación
+        response = self.client.get(f'/facturacion/gas/eliminar-lectura/{lectura.id}/', follow=True)
+        self.assertEqual(response.status_code, 200)
+        
+        # Verificar que la lectura y factura hayan sido eliminadas
+        self.assertFalse(LecturaGas.objects.filter(id=lectura.id).exists())
+        self.assertFalse(Factura.objects.filter(id=factura.id).exists())

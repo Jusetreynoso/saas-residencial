@@ -110,6 +110,7 @@
                                 <th>Act.</th>
                                 <th class="bg-primary text-white">Galones</th>
                                 <th class="bg-success text-white">Total ($)</th>
+                                <th style="width: 10%;">Acción</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -128,10 +129,22 @@
                                 <td class="fw-bold text-success">
                                     ${{ item.total|floatformat:2 }}
                                 </td>
+                                <td>
+                                    {% if item.lectura_id %}
+                                    <a href="{% url 'eliminar_lectura_gas' item.lectura_id %}" 
+                                       class="btn btn-sm btn-outline-danger" 
+                                       title="Eliminar esta lectura y su factura"
+                                       onclick="return confirm('⚠️ ¿Eliminar la lectura de gas del Apto {{ item.apto }} y su factura asociada?\n\nPodrás ingresar nuevamente la lectura correcta.')">
+                                        🗑️
+                                    </a>
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="6" class="text-muted py-3">No hay lecturas registradas aún.</td>
+                                <td colspan="7" class="text-muted py-3">No hay lecturas registradas aún.</td>
                             </tr>
                             {% endfor %}
                         </tbody>

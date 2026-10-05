@@ -27,6 +27,8 @@ urlpatterns = [
     path('bloquear-fecha/', views.bloquear_fecha, name='bloquear_fecha'),
 
     path('facturacion/gas/', views.registrar_lectura_gas, name='registrar_lectura_gas'),
+    path('facturacion/gas/eliminar-lectura/<int:lectura_id>/', views.eliminar_lectura_gas, name='eliminar_lectura_gas'),
+    path('facturacion/gas/eliminar-factura/<int:factura_id>/', views.eliminar_factura_gas, name='eliminar_factura_gas'),
 
     path('facturacion/generar-cuotas/', views.generar_cuotas_masivas, name='generar_cuotas_masivas'),
 

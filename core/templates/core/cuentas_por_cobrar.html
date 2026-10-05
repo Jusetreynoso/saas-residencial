@@ -152,6 +152,14 @@
                                         data-tipo="{% if factura.tipo == 'GAS' %}GAS{% else %}MANTENIMIENTO{% endif %}">
                                     <i class="bi bi-cash"></i> 💲 Registrar Pago
                                 </button>
+                                {% if factura.tipo == 'GAS' %}
+                                <a href="{% url 'eliminar_factura_gas' factura.id %}" 
+                                   class="btn btn-outline-danger btn-sm fw-bold ms-1" 
+                                   title="Eliminar factura y lectura de gas errónea"
+                                   onclick="return confirm('⚠️ ¿Deseas eliminar la factura de gas errónea del Apto {{ factura.usuario.apartamento.numero }}?\n\nSe eliminará la lectura correspondiente para que puedas volver a ingresarla.')">
+                                    🗑️
+                                </a>
+                                {% endif %}
                             </td>
                         </tr>
                         {% empty %}

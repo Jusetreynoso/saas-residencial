@@ -411,6 +411,7 @@ def registrar_lectura_gas(request):
         ultima = LecturaGas.objects.filter(apartamento=apt).order_by('-fecha_lectura').first()
         datos = {
             'id': apt.id,
+            'lectura_id': ultima.id if ultima else None,
             'apto': apt.numero,
             'ultima_fecha': ultima.fecha_lectura if ultima else "---",
             'lectura_anterior': ultima.lectura_anterior if ultima else Decimal('0.000'),
@@ -426,6 +427,69 @@ def registrar_lectura_gas(request):
         'form': form,
         'estado_medidores': estado_medidores
     })
+
+@login_required
+def eliminar_lectura_gas(request, lectura_id):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        messages.error(request, "No tienes permiso para esta acción.")
+        return redirect('dashboard')
+        
+    lectura = get_object_or_404(LecturaGas, id=lectura_id, residencial=request.user.residencial)
+    apto_numero = lectura.apartamento.numero
+    
+    with transaction.atomic():
+        if lectura.factura_generada:
+            factura = lectura.factura_generada
+            if factura.monto_pagado > 0:
+                residente = factura.usuario
+                residente.saldo_favor_gas += factura.monto_pagado
+                residente.save()
+            factura.delete()
+            
+        lectura.delete()
+        
+        Bitacora.objects.create(
+            residencial=request.user.residencial,
+            usuario=request.user,
+            modulo='FINANZAS/GAS',
+            accion=f"Eliminó la lectura de gas y la factura asociada del Apto {apto_numero}.",
+            nivel='WARNING'
+        )
+        
+    messages.success(request, f"🗑️ Se eliminó correctamente la lectura de gas del Apto {apto_numero} y su factura asociada.")
+    return redirect('registrar_lectura_gas')
+
+@login_required
+def eliminar_factura_gas(request, factura_id):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        messages.error(request, "No tienes permiso para esta acción.")
+        return redirect('dashboard')
+        
+    factura = get_object_or_404(Factura, pk=factura_id, residencial=request.user.residencial, tipo='GAS')
+    apto_numero = factura.usuario.apartamento.numero if factura.usuario.apartamento else "S/A"
+    
+    with transaction.atomic():
+        lectura = LecturaGas.objects.filter(factura_generada=factura).first()
+        if factura.monto_pagado > 0:
+            residente = factura.usuario
+            residente.saldo_favor_gas += factura.monto_pagado
+            residente.save()
+            
+        if lectura:
+            lectura.delete()
+            
+        factura.delete()
+        
+        Bitacora.objects.create(
+            residencial=request.user.residencial,
+            usuario=request.user,
+            modulo='FINANZAS/GAS',
+            accion=f"Eliminó la factura de gas '{factura.concepto}' y su lectura asociada del Apto {apto_numero}.",
+            nivel='WARNING'
+        )
+        
+    messages.success(request, f"🗑️ Se eliminó correctamente la factura de gas del Apto {apto_numero}.")
+    return redirect('cuentas_por_cobrar')
 
 # ---------------------------------------------
 # VISTA: Generar Cuotas Masivas (CORREO DESACTIVADO/SIMULADO)
@@ -1087,9 +1151,9 @@ def aplicar_moras(request):
             factura.saldo_pendiente = saldo + recargo
             texto_mora = f" (+{porcentaje}% Mora)"
             if texto_mora not in factura.concepto:
-                factura.concepto = (factura.concepto + texto_mora)[:255]
+                factura.concepto = (factura.concepto + texto_mora)[:100]
             else:
-                factura.concepto = factura.concepto[:255]
+                factura.concepto = factura.concepto[:100]
             factura.fecha_ultima_mora = hoy 
             
             factura.save()

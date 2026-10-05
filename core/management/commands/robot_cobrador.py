@@ -135,9 +135,9 @@ class Command(BaseCommand):
                     factura.saldo_pendiente = saldo + recargo
                     texto_mora = f" (+{porcentaje}% Mora)"
                     if texto_mora not in factura.concepto:
-                        factura.concepto = (factura.concepto + texto_mora)[:255]
+                        factura.concepto = (factura.concepto + texto_mora)[:100]
                     else:
-                        factura.concepto = factura.concepto[:255]
+                        factura.concepto = factura.concepto[:100]
                     factura.fecha_ultima_mora = hoy 
                     
                     factura.save()
