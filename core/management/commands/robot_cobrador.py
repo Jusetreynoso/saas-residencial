@@ -128,11 +128,16 @@ class Command(BaseCommand):
                             aplicar = True
                             
                 if aplicar:
-                    recargo = factura.saldo_pendiente * (porcentaje / Decimal('100'))
+                    saldo = factura.saldo_pendiente if factura.saldo_pendiente is not None else factura.monto
+                    recargo = saldo * (porcentaje / Decimal('100'))
                     
                     factura.monto += recargo
-                    factura.saldo_pendiente += recargo
-                    factura.concepto += f" (+{porcentaje}% Mora)"
+                    factura.saldo_pendiente = saldo + recargo
+                    texto_mora = f" (+{porcentaje}% Mora)"
+                    if texto_mora not in factura.concepto:
+                        factura.concepto = (factura.concepto + texto_mora)[:255]
+                    else:
+                        factura.concepto = factura.concepto[:255]
                     factura.fecha_ultima_mora = hoy 
                     
                     factura.save()

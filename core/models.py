@@ -221,7 +221,7 @@ class Factura(models.Model):
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='facturas')
     
     tipo = models.CharField(max_length=10, choices=TIPOS, default='CUOTA')
-    concepto = models.CharField(max_length=100)
+    concepto = models.CharField(max_length=255)
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     
     fecha_emision = models.DateField(default=timezone.now)
