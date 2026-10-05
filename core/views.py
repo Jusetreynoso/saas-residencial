@@ -1150,10 +1150,11 @@ def aplicar_moras(request):
             factura.monto += recargo
             factura.saldo_pendiente = saldo + recargo
             texto_mora = f" (+{porcentaje}% Mora)"
-            if texto_mora not in factura.concepto:
-                factura.concepto = (factura.concepto + texto_mora)[:100]
+            concepto_base = (factura.concepto or "")[:75]
+            if texto_mora not in (factura.concepto or ""):
+                factura.concepto = (concepto_base + texto_mora)[:100]
             else:
-                factura.concepto = factura.concepto[:100]
+                factura.concepto = (factura.concepto or "")[:100]
             factura.fecha_ultima_mora = hoy 
             
             factura.save()
