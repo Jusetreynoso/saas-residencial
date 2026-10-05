@@ -182,3 +182,10 @@ class CategoriaTestCase(TestCase):
         # Verificar que la respuesta contiene el usuario residente1 y NO admin1
         self.assertEqual(response.context['vecino_seleccionado'], residente1)
         self.assertIsNone(response.context['vecinos'])
+
+    def test_reporte_matriz_cobros(self):
+        self.client.login(username='admin1', password='password123')
+        response = self.client.get('/reportes/matriz-cobros/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('matriz_datos', response.context)
+        self.assertIn('totales_meses', response.context)

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Matriz de Cobros por Mes - {{ residencial.nombre }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            background-color: #f8f9fa; 
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .card { 
+            background: rgba(255, 255, 255, 0.95); 
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); 
+            border-radius: 12px; 
+        }
+
+        .table-excel {
+            font-size: 0.88rem;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table-excel th, .table-excel td {
+            vertical-align: middle;
+            text-align: center;
+            padding: 8px 12px;
+            white-space: nowrap;
+            border: 1px solid #dee2e6;
+        }
+
+        .table-excel thead th {
+            background-color: #e9ecef;
+            color: #495057;
+            font-weight: 700;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .col-apto {
+            font-weight: 700;
+            background-color: #f1f3f5 !important;
+            position: sticky;
+            left: 0;
+            z-index: 3;
+            text-align: left !important;
+        }
+
+        .cell-deuda {
+            color: #dc3545;
+            font-weight: 700;
+            background-color: #fff5f5;
+        }
+
+        .cell-al-dia {
+            color: #495057;
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { background-color: white; }
+            .card { border: none; box-shadow: none !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .col-apto { position: static !important; }
+        }
+    </style>
+</head>
+
+<body class="pb-5">
+
+<div class="container-fluid mt-4 px-4">
+    
+    <!-- ENCABEZADO Y CONTROLES -->
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print flex-wrap gap-3">
+        <div>
+            <a href="{% url 'menu_reportes' %}" class="btn btn-outline-secondary">⬅ Volver al Menú</a>
+            <h3 class="d-inline-block ms-3 fw-bold text-dark mb-0">📋 Matriz de Cobros por Mes</h3>
+        </div>
+        
+        <div class="d-flex gap-2 align-items-center">
+            <form method="GET" class="d-flex align-items-center me-2">
+                <label class="me-2 fw-bold text-muted small">Año:</label>
+                <select name="anio" class="form-select form-select-sm border-primary" onchange="this.form.submit()">
+                    {% for a in lista_anios %}
+                        <option value="{{ a }}" {% if a == anio_seleccionado %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+
+            <button onclick="copiarResumenWhatsApp()" class="btn btn-success fw-bold">
+                <i class="bi bi-whatsapp"></i> 📋 Copiar para WhatsApp
+            </button>
+            <button onclick="window.print()" class="btn btn-dark fw-bold">
+                🖨️ Imprimir / PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- TARJETA PRINCIPAL DE LA MATRIZ DE EXCEL -->
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
+            <div>
+                <h5 class="mb-0 fw-bold">🏢 {{ residencial.nombre }} - Estado de Pagos Mensual {{ anio_seleccionado }}</h5>
+                <small class="opacity-75">Las deudas y moras se visualizan en la columna del mes en el que se originaron.</small>
+            </div>
+            <span class="badge bg-light text-primary fs-6 fw-bold">Total Pendiente: ${{ total_deuda_global|floatformat:2 }}</span>
+        </div>
+        
+        <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 75vh;">
+                <table class="table table-hover table-excel mb-0" id="tablaMatriz">
+                    <thead>
+                        <tr>
+                            <th class="col-apto ps-3">Apartamento</th>
+                            {% for m in meses_nombres %}
+                                <th>{{ m }}</th>
+                            {% endfor %}
+                            <th class="bg-dark text-white">Total Pendiente</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in matriz_datos %}
+                        <tr>
+                            <td class="col-apto ps-3">{{ fila.numero }}</td>
+                            
+                            {% for monto_mes in fila.meses %}
+                                {% if monto_mes > 0 %}
+                                    <td class="cell-deuda">${{ monto_mes|floatformat:2 }}</td>
+                                {% else %}
+                                    <td class="cell-al-dia">$0.00</td>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            <td class="fw-bold {% if fila.total_deuda > 0 %}text-danger bg-light{% else %}text-muted{% endif %}">
+                                ${{ fila.total_deuda|floatformat:2 }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="14" class="text-center p-5 text-muted fs-5">No hay apartamentos ni registros para el año seleccionado.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-dark">
+                        <tr>
+                            <td class="col-apto ps-3 fw-bold text-white bg-dark">TOTALES</td>
+                            {% for total_m in totales_meses %}
+                                <td class="fw-bold {% if total_m > 0 %}text-warning{% endif %}">${{ total_m|floatformat:2 }}</td>
+                            {% endfor %}
+                            <td class="fw-bold fs-6 text-warning">${{ total_deuda_global|floatformat:2 }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SCRIPT PARA COPIAR A WHATSAPP / EXCEL -->
+<script>
+function copiarResumenWhatsApp() {
+    let texto = "*📋 ESTADO DE PAGOS Y CUOTAS - {{ residencial.nombre }} ({{ anio_seleccionado }})*\n\n";
+    texto += "Apto\t|\t" + [{% for m in meses_nombres %}"{{ m|slice:':3' }}",{% endfor %}].join("\t") + "\t|\tTotal\n";
+    texto += "---------------------------------------------------------\n";
+
+    {% for fila in matriz_datos %}
+        {% if fila.total_deuda > 0 %}
+            texto += "*{{ fila.numero }}*:\t" + [
+                {% for m in fila.meses %}
+                    "{% if m > 0 %}${{ m|floatformat:0 }}{% else %}0{% endif %}",
+                {% endfor %}
+            ].join("\t") + "\t=> *${{ fila.total_deuda|floatformat:2 }}*\n";
+        {% endif %}
+    {% endfor %}
+
+    texto += "\n*Total Deuda Residencial:* ${{ total_deuda_global|floatformat:2 }}\n";
+    texto += "_Generado automáticamente por el Sistema SaaS Residencial._";
+
+    navigator.clipboard.writeText(texto).then(() => {
+        alert("✅ Resumen copiado al portapapeles. ¡Listo para pegar en WhatsApp!");
+    }).catch(err => {
+        alert("⚠️ No se pudo copiar automáticamente. Intenta de nuevo.");
+    });
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

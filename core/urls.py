@@ -87,6 +87,8 @@ urlpatterns = [
 
     path('reportes/morosidad/', views.reporte_morosidad, name='reporte_morosidad'),
 
+    path('reportes/matriz-cobros/', views.reporte_matriz_cobros, name='reporte_matriz_cobros'),
+
     path('reportes/transparencia/', views.reporte_transparencia, name='reporte_transparencia'),
 
     path('finanzas/categorias/', views.configurar_categorias, name='configurar_categorias'),

@@ -1742,6 +1742,79 @@ def reporte_morosidad(request):
     return render(request, 'core/reporte_morosidad.html', context)
 
 @login_required
+def reporte_matriz_cobros(request):
+    if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
+        return redirect('dashboard')
+
+    residencial = request.user.residencial
+    hoy = timezone.now().date()
+    
+    anio_raw = str(request.GET.get('anio', hoy.year)).replace('\xa0', '').replace(' ', '').replace(',', '')
+    try:
+        anio_seleccionado = int(anio_raw)
+    except ValueError:
+        anio_seleccionado = hoy.year
+
+    apartamentos = Apartamento.objects.filter(residencial=residencial).order_by('numero')
+    
+    meses_nombres = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ]
+
+    facturas_anio = Factura.objects.filter(
+        residencial=residencial,
+        fecha_emision__year=anio_seleccionado
+    ).select_related('usuario', 'usuario__apartamento')
+
+    matriz_datos = []
+    totales_meses = [Decimal('0.00')] * 12
+    total_deuda_global = Decimal('0.00')
+
+    for apt in apartamentos:
+        meses_apto = []
+        total_deuda_apto = Decimal('0.00')
+
+        facturas_apto = facturas_anio.filter(usuario__apartamento=apt)
+
+        for m_idx in range(1, 13):
+            facturas_mes = facturas_apto.filter(fecha_emision__month=m_idx)
+            
+            deuda_mes = Decimal('0.00')
+            for f in facturas_mes:
+                if f.estado in ['PENDIENTE', 'PARCIAL', 'VENCIDO']:
+                    saldo = f.saldo_pendiente if f.saldo_pendiente is not None else f.monto
+                    deuda_mes += saldo
+
+            meses_apto.append(deuda_mes)
+            total_deuda_apto += deuda_mes
+            totales_meses[m_idx - 1] += deuda_mes
+
+        total_deuda_global += total_deuda_apto
+
+        matriz_datos.append({
+            'apartamento': apt,
+            'numero': apt.numero,
+            'meses': meses_apto,
+            'total_deuda': total_deuda_apto
+        })
+
+    lista_anios = range(2024, hoy.year + 2)
+
+    context = {
+        'matriz_datos': matriz_datos,
+        'meses_nombres': meses_nombres,
+        'totales_meses': totales_meses,
+        'total_deuda_global': total_deuda_global,
+        'anio_seleccionado': anio_seleccionado,
+        'lista_anios': lista_anios,
+        'residencial': residencial,
+        'hoy': hoy
+    }
+    
+    return render(request, 'core/reporte_matriz_cobros.html', context)
+
+@login_required
 def reporte_transparencia(request):
     if request.user.rol not in ['ADMIN_RESIDENCIAL', 'SUPERADMIN']:
         return redirect('dashboard')
